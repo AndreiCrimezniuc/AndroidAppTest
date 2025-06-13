@@ -4,6 +4,7 @@ import { createStackNavigator } from '@react-navigation/stack';
 import * as Linking from 'expo-linking';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { enableScreens } from 'react-native-screens';
+import { Text } from 'react-native';
 import Login from "./src/app/login";
 import Home from "./src/app/home";
 
@@ -11,24 +12,17 @@ enableScreens();
 const Stack = createStackNavigator();
 
 export default function App() {
-  const url = Linking.useURL();
-  if (url) {
-    const { hostname, path, queryParams } = Linking.parse(url);
-    console.log(
-      `Linked to app with hostname: ${hostname}, path: ${path} and data: ${JSON.stringify(
-        queryParams
-      )}`
-    );
-  }
+  // const url = Linking.useURL();
+  // if (url) {
+  //   const { hostname, path, queryParams } = Linking.parse(url);
+  //   console.log(
+  //     `Linked to app with hostname: ${hostname}, path: ${path} and data: ${JSON.stringify(
+  //       queryParams
+  //     )}`
+  //   );
+  // }
 
   return (
-    <GestureHandlerRootView style={{ flex: 1 }}>
-      <NavigationContainer>
-        <Stack.Navigator initialRouteName="Index">
-          <Stack.Screen name="Index" component={Login}/>
-          <Stack.Screen name="Home" component={Home} />
-        </Stack.Navigator>
-      </NavigationContainer>
-    </GestureHandlerRootView>
+    <Text>Hello</Text>
   );
 }

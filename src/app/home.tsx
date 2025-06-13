@@ -2,6 +2,8 @@ import React, {useEffect, useState} from 'react';
 import {Image, ScrollView, StyleSheet, Text, TouchableOpacity, View} from 'react-native';
 import Button from '../components/Buttons/Button';
 import SecondaryButton from '../components/Buttons/SecondaryButton';
+import sdkBridge from "../service/sdk/sdk_bridge";
+import startSDK from "../service/sdk/sdk_service";
 
 const Home = () => {
     const [connected, setConnected] = useState(false);
@@ -10,7 +12,6 @@ const Home = () => {
     const [referralLink, setReferralLink] = useState('');
     const [isCopied, setCopied] = useState(false);
     const [quality, setQuality] = useState(0.75);
-
     const icon_dots = require('../assets/logo/icon_dots.png');
     const icon_wifi = require('../assets/logo/icon_wifi.png');
     const icon_wifi_offline = require('../assets/logo/icon_wifi_offline.png');
@@ -18,6 +19,11 @@ const Home = () => {
     const icon_refresh = require('../assets/logo/icon_refresh.png');
     const icon_logout = require('../assets/logo/icon_logout.png');
     const bg = require('../assets/logo/bg.png');
+
+    //toDo: replace with actual token retrieval logic
+    let token = ""
+
+
 
     const clipboardHandle = () => {
         console.log('Copying to clipboard: ' + referralLink);
@@ -125,7 +131,7 @@ const Home = () => {
                         </Text>
                     )}
                     {!connected && (
-                        <Button onPress={() => {}} label="Connect" disabled={false} style={styles.connectButton}/>
+                        <Button  label="Connect" disabled={false} style={styles.connectButton}/>
                     )}
                 </View>
                 <View style={styles.earnings}>

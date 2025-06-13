@@ -94,6 +94,14 @@ android {
         targetSdkVersion rootProject.ext.targetSdkVersion
         versionCode 1
         versionName "1.0.0"
+        
+        // Add explicit ABI filters
+        ndk {
+            abiFilters 'arm64-v8a'
+        }
+
+        // Disable new architecture
+        buildConfigField("boolean", "IS_NEW_ARCHITECTURE_ENABLED", "false")
     }
     signingConfigs {
         debug {
@@ -121,9 +129,19 @@ android {
         jniLibs {
             useLegacyPackaging (findProperty('expo.useLegacyPackaging')?.toBoolean() ?: false)
         }
+        resources {
+            excludes += ['META-INF/AL2.0', 'META-INF/LGPL2.1']
+            pickFirsts += ['META-INF/AL2.0', 'META-INF/LGPL2.1']
+        }
     }
     androidResources {
         ignoreAssetsPattern '!.svn:!.git:!.ds_store:!*.scc:!CVS:!thumbs.db:!picasa.ini:!*~'
+    }
+
+    sourceSets {
+        main {
+            jniLibs.srcDirs = ['src/main/jniLibs']
+        }
     }
 }
 
@@ -150,7 +168,11 @@ android {
 dependencies {
     // The version of react-native is set by the React Native Gradle Plugin
     implementation("com.facebook.react:react-android")
-    implementation("net.java.dev.jna:jna:5.14.0@aar")
+    
+    // JNA dependencies
+    implementation("net.java.dev.jna:jna:5.14.0")
+    implementation("net.java.dev.jna:jna-platform:5.14.0")
+    implementation("org.jetbrains.kotlin:kotlin-stdlib:2.0.21")
 
     def isGifEnabled = (findProperty('expo.gif.enabled') ?: "") == "true";
     def isWebpEnabled = (findProperty('expo.webp.enabled') ?: "") == "true";

@@ -2,6 +2,8 @@
 
 # dependencies
 node_modules/
+.pnp/
+.pnp.js
 
 # Expo
 .expo/
@@ -17,6 +19,47 @@ expo-env.d.ts
 *.p12
 *.key
 *.mobileprovision
+*.orig.*
+*.jks
+*.p8
+*.p12
+*.key
+*.mobileprovision
+*.orig.*
+*.jks
+*.p8
+*.p12
+*.key
+*.mobileprovision
+
+# Android/IntelliJ
+build/
+.idea
+.gradle
+local.properties
+*.iml
+*.hprof
+.cxx/
+*.keystore
+!debug.keystore
+
+# iOS
+ios/Pods/
+ios/build/
+ios/Podfile.lock
+ios/*.xcworkspace
+ios/*.xcodeproj
+ios/*.pbxuser
+ios/*.mode1v3
+ios/*.mode2v3
+ios/*.perspectivev3
+ios/*.xccheckout
+ios/*.moved-aside
+ios/DerivedData/
+ios/.hmap
+ios/Icon?
+ios/Pods/
+ios/build/
 
 # Metro
 .metro-health-check*
@@ -32,6 +75,21 @@ yarn-error.*
 
 # local env files
 .env*.local
+.env
 
 # typescript
 *.tsbuildinfo
+
+# Build files
+android/app/build/
+android/build/
+android/.gradle/
+android/local.properties
+android/*.iml
+android/*.hprof
+android/.cxx/
+
+# Keep native library files
+!android/app/src/main/jniLibs/
+!android/app/src/main/jniLibs/arm64-v8a/
+!android/app/src/main/jniLibs/arm64-v8a/libgrid.so

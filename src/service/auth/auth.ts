@@ -1,5 +1,6 @@
 import { parseUrl } from 'query-string';
 import {AUTH_LINK, CLIENT_ID, CLIENT_SECRET, KEYCLOAK_BASE_URL, REDIRECT_URI} from "./links";
+import { tokenStorage } from '../../services/storage/tokenStorage';
 
 // @ts-ignore
 export const handleRegisterRedirect = (navState: any) => {
@@ -16,13 +17,13 @@ export const handleLoginRedirect = (navState: any, navigation: any) => {
 
         if (authCode) {
             fetchBearerToken(authCode)
-                .then(()=> {
-                    console.log("Bearer token retrieved successfully")
+                .then(async (token) => {
+                    console.log("Bearer token retrieved successfully");
+                    await tokenStorage.saveToken(token);
                     navigation.navigate("Home");
-
                 }).catch((error) => {
-                console.error("Bearer token retrieval failed. " + error.toString())
-            });
+                    console.error("Bearer token retrieval failed. " + error.toString())
+                });
         }
     } catch (error) {
        console.error("cannot retrieve bearer token from keycloak")
