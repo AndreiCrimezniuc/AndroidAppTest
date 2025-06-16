@@ -14,47 +14,35 @@ import com.sun.jna.StringArray
 import com.sun.jna.ptr.PointerByReference
 
 interface GridLibrary : Library {
-    fun Start(ctoken: String): String
-    fun GetLibVersion(): String
+     fun Start(ctoken: String): String?
+     fun GetLibVersion(): String?
 
-    companion object {
-        private const val TAG = "GridLibrary"
-        private var instance: GridLibrary? = null
-        
-        fun getInstance(): GridLibrary {
-            if (instance == null) {
-                try {
-                    Log.d(TAG, "Starting native library loading process")
-                    
-                    // Try loading with SoLoader first (recommended for React Native)
-                    try {
-                        Log.d(TAG, "Attempting to load library with SoLoader")
-                        SoLoader.loadLibrary("grid")
-                        Log.d(TAG, "Successfully loaded library with SoLoader")
-                    } catch (e: Exception) {
-                        Log.e(TAG, "Failed to load with SoLoader, trying System.loadLibrary", e)
-                        try {
-                            Log.d(TAG, "Attempting to load library with System.loadLibrary")
-                            System.loadLibrary("grid")
-                            Log.d(TAG, "Successfully loaded library with System.loadLibrary")
-                        } catch (e2: Exception) {
-                            Log.e(TAG, "Failed to load with System.loadLibrary", e2)
-                            throw e2
-                        }
-                    }
-                    
-                    Log.d(TAG, "Attempting to create native interface")
-                    instance = Native.load("grid", GridLibrary::class.java)
-                    Log.d(TAG, "Successfully created native interface")
-                } catch (e: Exception) {
-                    Log.e(TAG, "Failed to load native library", e)
-                    Log.e(TAG, "Error type: ${e.javaClass.name}")
-                    Log.e(TAG, "Error message: ${e.message}")
-                    e.printStackTrace()
-                    throw RuntimeException("Failed to load native library: ${e.message}")
-                }
-            }
-            return instance!!
+     companion object {
+         private const val TAG = "GridLibrary"
+         private var instance: GridLibrary? = null
+
+         fun getInstance(): GridLibrary {
+             if (instance == null) {
+                 synchronized(this) {
+                     if (instance == null) {
+                         try {
+                             Log.d(TAG, "Loading native library 'grid'")
+
+                             // Use SoLoader for React Native
+                             SoLoader.loadLibrary("grid")
+
+                             Log.d(TAG, "Creating JNA interface")
+                             instance = Native.load("grid", GridLibrary::class.java)
+                             Log.d(TAG, "Successfully initialized GridLibrary")
+
+                         } catch (e: Exception) {
+                             Log.e(TAG, "Failed to initialize GridLibrary: ${e.message}", e)
+                             throw RuntimeException("Failed to load native library 'grid': ${e.message}", e)
+                         }
+                     }
+                 }
+             }
+             return instance!!
         }
     }
 }

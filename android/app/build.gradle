@@ -95,9 +95,9 @@ android {
         versionCode 1
         versionName "1.0.0"
         
-        // Add explicit ABI filters
+        // Updated ABI filters to include more architectures for JNA support
         ndk {
-            abiFilters 'arm64-v8a'
+            abiFilters "arm64-v8a", "armeabi-v7a", "x86", "x86_64"
         }
 
         // Disable new architecture
@@ -132,6 +132,24 @@ android {
         resources {
             excludes += ['META-INF/AL2.0', 'META-INF/LGPL2.1']
             pickFirsts += ['META-INF/AL2.0', 'META-INF/LGPL2.1']
+
+            // Add additional exclusions for JNA conflicts
+            excludes += [
+                'META-INF/DEPENDENCIES',
+                'META-INF/LICENSE',
+                'META-INF/LICENSE.txt',
+                'META-INF/NOTICE',
+                'META-INF/NOTICE.txt'
+            ]
+
+            // Handle native library conflicts
+            pickFirsts += [
+                '**/libjnidispatch.so',
+                '**/libgrid.so',
+                '**/libc++_shared.so',
+                '**/libfbjni.so',
+                '**/libreactnativejni.so'
+            ]
         }
     }
     androidResources {

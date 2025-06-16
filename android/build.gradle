@@ -30,6 +30,10 @@ def reactNativeAndroidDir = new File(
 
 allprojects {
   repositories {
+    // Put Google and Maven Central first
+    google()
+    mavenCentral()
+
     maven {
       // All of React Native (JS, Obj-C sources, Android binaries) is installed from npm
       url("$rootDir/../node_modules/react-native/android")
@@ -43,12 +47,13 @@ allprojects {
       url("$rootDir/../node_modules/expo/android/maven")
     }
     maven {
-      // JNA repository
+      // JNA repository - explicitly set
       url("https://repo1.maven.org/maven2/")
+      name "Maven Central"
     }
-    mavenCentral()
-    google()
-    maven { url 'https://www.jitpack.io' }
+    maven {
+      url 'https://www.jitpack.io'
+    }
   }
 }
 

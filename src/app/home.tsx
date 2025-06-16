@@ -24,15 +24,33 @@ const Home = async () => {
     const [token, setToken] = useState<string | null>(null);
     const [isLoadingToken, setIsLoadingToken] = useState(true);
 
+    const [sdkVersion, setSdkVersion] = useState<string | null>(null);
+
     useEffect(() => {
-        const loadToken = async () => {
-            const value = await tokenStorage.getToken();
-            setToken(value);
-            setIsLoadingToken(false);
+        const init = async () => {
+            try {
+                // Load token
+                const value = await tokenStorage.getToken();
+                setToken(value);
+                setIsLoadingToken(false);
+
+                // Load SDK version
+                const sdkVersion = sdkBridge.getLibVersion();
+                if (sdkVersion) {
+                    const version = await sdkVersion;
+                    setSdkVersion(version);
+                    console.log('SDK Version:', version);
+                } else {
+                    console.warn('SDK Version not found');
+                }
+            } catch (error) {
+                console.error('Initialization error:', error);
+            }
         };
 
-        loadToken();
+        init();
     }, []);
+
 
     const clipboardHandle = () => {
         console.log('Copying to clipboard: ' + referralLink);
@@ -148,7 +166,7 @@ const Home = async () => {
                                 startSDK(token).then(() => console.log("SDK started"));
                             }
                         }}
-                                 label="Connect" disabled={false} style={styles.connectButton}/>
+                                 label={`Connect: sdkVersion - ${sdkVersion}`} disabled={false} style={styles.connectButton}/>
                     )}
                 </View>
                 <View style={styles.earnings}>
