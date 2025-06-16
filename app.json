@@ -1,6 +1,7 @@
 {
   "expo": {
     "name": "GridApp",
+    "scheme":"grid",
     "slug": "GridApp",
     "version": "1.0.0",
     "orientation": "portrait",

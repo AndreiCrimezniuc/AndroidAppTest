@@ -4,8 +4,9 @@ import Button from '../components/Buttons/Button';
 import SecondaryButton from '../components/Buttons/SecondaryButton';
 import sdkBridge from "../service/sdk/sdk_bridge";
 import startSDK from "../service/sdk/sdk_service";
+import {tokenStorage} from "../service/storage/tokenStorage";
 
-const Home = () => {
+const Home = async () => {
     const [connected, setConnected] = useState(false);
     const [todayEarnings, setTodayEarnings] = useState(0);
     const [isOpenedDots, setIsOpenedDots] = useState(false);
@@ -20,10 +21,18 @@ const Home = () => {
     const icon_logout = require('../assets/logo/icon_logout.png');
     const bg = require('../assets/logo/bg.png');
 
-    //toDo: replace with actual token retrieval logic
-    let token = ""
+    const [token, setToken] = useState<string | null>(null);
+    const [isLoadingToken, setIsLoadingToken] = useState(true);
 
+    useEffect(() => {
+        const loadToken = async () => {
+            const value = await tokenStorage.getToken();
+            setToken(value);
+            setIsLoadingToken(false);
+        };
 
+        loadToken();
+    }, []);
 
     const clipboardHandle = () => {
         console.log('Copying to clipboard: ' + referralLink);
@@ -130,8 +139,16 @@ const Home = () => {
                             You're doing great! Keep connected to this network to earn.
                         </Text>
                     )}
-                    {!connected && (
-                        <Button  label="Connect" disabled={false} style={styles.connectButton}/>
+                    {!connected && isLoadingToken && (
+                        <Text style={{ color: '#fff', marginTop: 10 }}>Loading token...</Text>
+                    )}
+                    {!connected && !isLoadingToken && (
+                        <Button  onPress={() => {
+                            if (token) {
+                                startSDK(token).then(() => console.log("SDK started"));
+                            }
+                        }}
+                                 label="Connect" disabled={false} style={styles.connectButton}/>
                     )}
                 </View>
                 <View style={styles.earnings}>

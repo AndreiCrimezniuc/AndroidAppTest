@@ -1,11 +1,37 @@
 import { parseUrl } from 'query-string';
-import {AUTH_LINK, CLIENT_ID, CLIENT_SECRET, KEYCLOAK_BASE_URL, REDIRECT_URI} from "./links";
-import { tokenStorage } from '../../services/storage/tokenStorage';
+import {AUTH_LINK, CLIENT_ID, CLIENT_SECRET, KEYCLOAK_BASE_URL, AFTER_REGISTRATION_REDIRECT_URL} from "./links";
+import { tokenStorage } from '../storage/tokenStorage';
 
 // @ts-ignore
-export const handleRegisterRedirect = (navState: any) => {
-    //toDO
-}
+export const handleRegisterRedirect = (navState: any,  navigation: any) => {
+    const { url } = navState;
+
+    if (url && url.startsWith(AFTER_REGISTRATION_REDIRECT_URL)) {
+        try {
+            const urlObj = new URL(url);
+            const code = urlObj.searchParams.get('code');
+            const error = urlObj.searchParams.get('error');
+
+            if (error) {
+                console.error('Authentication error:', error);
+                //toDo: handle error appropriately, e.g., show an alert
+                return;
+            }
+
+            if (code) {
+                console.log('Authorization code received:', code);
+
+                fetchBearerToken(code).then(() => {
+                    navigation.navigate('Login');
+                }).catch((error) => {
+                    console.error('Token exchange failed:', error);
+                });
+            }
+        } catch (error) {
+            console.error('Error parsing redirect URL:', error);
+        }
+    }
+};
 
 export const handleLoginRedirect = (navState: any, navigation: any) => {
     try {
@@ -38,7 +64,7 @@ const fetchBearerToken = async (authCode: string): Promise<string> => {
     tokenParams.append("client_id", CLIENT_ID);
     tokenParams.append("client_secret", CLIENT_SECRET);
     tokenParams.append("code", authCode);
-    tokenParams.append("redirect_uri", REDIRECT_URI);
+    tokenParams.append("redirect_uri", AFTER_REGISTRATION_REDIRECT_URL);
 
     console.log("Token request params: ", tokenParams.toString());
     console.log("Auth Code received:", authCode);
