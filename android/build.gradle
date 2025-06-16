@@ -1,22 +1,14 @@
 // Top-level build file where you can add configuration options common to all sub-projects/modules.
 
 buildscript {
-  ext {
-    buildToolsVersion = findProperty('android.buildToolsVersion') ?: '35.0.0'
-    minSdkVersion = Integer.parseInt(findProperty('android.minSdkVersion') ?: '24')
-    compileSdkVersion = Integer.parseInt(findProperty('android.compileSdkVersion') ?: '35')
-    targetSdkVersion = Integer.parseInt(findProperty('android.targetSdkVersion') ?: '35')
-    ndkVersion = "27.1.12297006"
-    kotlinVersion = findProperty('android.kotlinVersion') ?: '2.0.21'
-  }
   repositories {
     google()
     mavenCentral()
   }
   dependencies {
-    classpath("com.android.tools.build:gradle:8.8.2")
-    classpath("com.facebook.react:react-native-gradle-plugin")
-    classpath("org.jetbrains.kotlin:kotlin-gradle-plugin:$kotlinVersion")
+    classpath('com.android.tools.build:gradle')
+    classpath('com.facebook.react:react-native-gradle-plugin')
+    classpath('org.jetbrains.kotlin:kotlin-gradle-plugin')
   }
 }
 
@@ -30,30 +22,14 @@ def reactNativeAndroidDir = new File(
 
 allprojects {
   repositories {
-    // Put Google and Maven Central first
-    google()
-    mavenCentral()
-
     maven {
       // All of React Native (JS, Obj-C sources, Android binaries) is installed from npm
-      url("$rootDir/../node_modules/react-native/android")
+      url(reactNativeAndroidDir)
     }
-    maven {
-      // Android JSC is installed from npm
-      url("$rootDir/../node_modules/jsc-android/dist")
-    }
-    maven {
-      // Expo modules
-      url("$rootDir/../node_modules/expo/android/maven")
-    }
-    maven {
-      // JNA repository - explicitly set
-      url("https://repo1.maven.org/maven2/")
-      name "Maven Central"
-    }
-    maven {
-      url 'https://www.jitpack.io'
-    }
+
+    google()
+    mavenCentral()
+    maven { url 'https://www.jitpack.io' }
   }
 }
 

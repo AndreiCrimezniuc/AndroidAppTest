@@ -88,20 +88,22 @@ android {
     compileSdk rootProject.ext.compileSdkVersion
 
     namespace 'com.nokogiriwatir.GridApp'
+
+    sourceSets {
+        main {
+            jniLibs.srcDirs = ['../../androidlibs', 'src/main/jniLibs']
+        }
+    }
+
     defaultConfig {
         applicationId 'com.nokogiriwatir.GridApp'
         minSdkVersion rootProject.ext.minSdkVersion
         targetSdkVersion rootProject.ext.targetSdkVersion
         versionCode 1
         versionName "1.0.0"
-        
-        // Updated ABI filters to include more architectures for JNA support
         ndk {
-            abiFilters "arm64-v8a", "armeabi-v7a", "x86", "x86_64"
+            abiFilters 'arm64-v8a', 'armeabi-v7a'
         }
-
-        // Disable new architecture
-        buildConfigField("boolean", "IS_NEW_ARCHITECTURE_ENABLED", "false")
     }
     signingConfigs {
         debug {
@@ -127,39 +129,12 @@ android {
     }
     packagingOptions {
         jniLibs {
-            useLegacyPackaging (findProperty('expo.useLegacyPackaging')?.toBoolean() ?: false)
-        }
-        resources {
-            excludes += ['META-INF/AL2.0', 'META-INF/LGPL2.1']
-            pickFirsts += ['META-INF/AL2.0', 'META-INF/LGPL2.1']
-
-            // Add additional exclusions for JNA conflicts
-            excludes += [
-                'META-INF/DEPENDENCIES',
-                'META-INF/LICENSE',
-                'META-INF/LICENSE.txt',
-                'META-INF/NOTICE',
-                'META-INF/NOTICE.txt'
-            ]
-
-            // Handle native library conflicts
-            pickFirsts += [
-                '**/libjnidispatch.so',
-                '**/libgrid.so',
-                '**/libc++_shared.so',
-                '**/libfbjni.so',
-                '**/libreactnativejni.so'
-            ]
+            useLegacyPackaging = false
+            pickFirsts += ['**/libgrid.so']
         }
     }
     androidResources {
         ignoreAssetsPattern '!.svn:!.git:!.ds_store:!*.scc:!CVS:!thumbs.db:!picasa.ini:!*~'
-    }
-
-    sourceSets {
-        main {
-            jniLibs.srcDirs = ['src/main/jniLibs']
-        }
     }
 }
 
@@ -186,11 +161,7 @@ android {
 dependencies {
     // The version of react-native is set by the React Native Gradle Plugin
     implementation("com.facebook.react:react-android")
-    
-    // JNA dependencies
-    implementation("net.java.dev.jna:jna:5.14.0")
-    implementation("net.java.dev.jna:jna-platform:5.14.0")
-    implementation("org.jetbrains.kotlin:kotlin-stdlib:2.0.21")
+    implementation 'net.java.dev.jna:jna:5.13.0@aar'
 
     def isGifEnabled = (findProperty('expo.gif.enabled') ?: "") == "true";
     def isWebpEnabled = (findProperty('expo.webp.enabled') ?: "") == "true";

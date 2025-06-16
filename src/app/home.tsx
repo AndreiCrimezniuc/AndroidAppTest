@@ -2,8 +2,7 @@ import React, {useEffect, useState} from 'react';
 import {Image, ScrollView, StyleSheet, Text, TouchableOpacity, View} from 'react-native';
 import Button from '../components/Buttons/Button';
 import SecondaryButton from '../components/Buttons/SecondaryButton';
-import sdkBridge from "../service/sdk/sdk_bridge";
-import startSDK from "../service/sdk/sdk_service";
+import {getLibVersion, startSDK} from "../service/sdk/sdk_service";
 import {tokenStorage} from "../service/storage/tokenStorage";
 
 const Home = async () => {
@@ -35,7 +34,7 @@ const Home = async () => {
                 setIsLoadingToken(false);
 
                 // Load SDK version
-                const sdkVersion = sdkBridge.getLibVersion();
+                const sdkVersion = getLibVersion();
                 if (sdkVersion) {
                     const version = await sdkVersion;
                     setSdkVersion(version);
