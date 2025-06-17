@@ -1,13 +1,19 @@
 import React, {useEffect, useState} from 'react';
-import {Image, ScrollView, StyleSheet, Text, TouchableOpacity, View} from 'react-native';
+import numeral from 'numeral';
+import {Image, Linking, ScrollView, StyleSheet, Text, TouchableOpacity, View} from 'react-native';
 import Button from '../components/Buttons/Button';
 import SecondaryButton from '../components/Buttons/SecondaryButton';
 import {getLibVersion, startSDK} from "../service/sdk/sdk_service";
 import {tokenStorage} from "../service/storage/tokenStorage";
+import {useNavigation} from "@react-navigation/native";
+import {NavigationProp} from "../service/navigation";
+import {DASHBOARD_SERVICE_URL, DASHBOARD_URL, KEYCLOAK_REGISTRATION_URL, REFERRAL_SERVICE_URL} from "../service/links";
+import {ReferralInfo, ReferralService} from "../service/referral/referral";
+import {DashboardService, Earnings} from "../service/dashboard/dashboard";
 
-const Home = async () => {
+const Home = () => {
     const [connected, setConnected] = useState(false);
-    const [todayEarnings, setTodayEarnings] = useState(0);
+    const [earnings, setEarnings] = useState<Earnings | null>(null);
     const [isOpenedDots, setIsOpenedDots] = useState(false);
     const [referralLink, setReferralLink] = useState('');
     const [isCopied, setCopied] = useState(false);
@@ -19,6 +25,9 @@ const Home = async () => {
     const icon_refresh = require('../assets/logo/icon_refresh.png');
     const icon_logout = require('../assets/logo/icon_logout.png');
     const bg = require('../assets/logo/bg.png');
+
+
+    const navigation = useNavigation<NavigationProp>();
 
     const [token, setToken] = useState<string | null>(null);
     const [isLoadingToken, setIsLoadingToken] = useState(true);
@@ -63,24 +72,40 @@ const Home = async () => {
     };
 
     const openDashboard = () => {
-        // DashboardLink().then((link) => {
-        //     Linking.openURL(link);
-        // });
+        Linking.openURL(DASHBOARD_URL).catch(err =>
+            console.error("Failed to open URL:", err)
+        );
     };
 
     useEffect(() => {
-        const fetchPoints = () => {
-            // TodayEarnings()
-            //     .then((points) => {
-            //         console.log('Got the points: ' + points);
-            //         setTodayEarnings(points);
-            //     })
-            //     .catch((err) => {
-            //         console.log('Error getting points: ' + err);
-            //     });
+
+        const retrieveReferralData = () => {
+            const referralService = new ReferralService(REFERRAL_SERVICE_URL, token ?? "");
+
+            referralService.getReferralInfo()
+                .then((info: ReferralInfo) => {
+                    console.log("Referral Info:", info);
+                    setReferralLink(KEYCLOAK_REGISTRATION_URL + `?referral_code=${info.referral_link}`)
+                })
+                .catch((err: any) => {
+                    console.error(err);
+                });
+        }
+
+        const fetchPoints = async () => {
+            const dashboardService = new DashboardService(DASHBOARD_SERVICE_URL, token ?? "");
+
+            const earnings = dashboardService.getEarnings().then((earningsData) => {
+                    console.log("Earnings fetched successfully.", earnings)
+                    setEarnings(earningsData)
+            }).catch((err: any) => console.error("Error fetching earnings:", err)
+            )
         };
 
-        fetchPoints();
+        if (token) {
+            fetchPoints();
+            retrieveReferralData()
+        }
 
         const intervalId = setInterval(fetchPoints, 60000);
 
@@ -101,7 +126,7 @@ const Home = async () => {
     }, []);
 
     const updateConnectedState = () => {
-         //??
+        //??
     };
 
     useEffect(() => {
@@ -112,16 +137,15 @@ const Home = async () => {
         updateConnectedState();
     }, []);
 
-    const logout = () => {
-        // Logout()
-        //     .then(() => LogoutURL())
-        //     .then((url) => {
-        //         console.log('Logging out and redirecting to: ' + url);
-        //         Linking.openURL(url);
-        //     })
-        //     .catch((error) => {
-        //         console.log('Logout failed: ' + error);
-        //     });
+    const logout = async () => {
+        try {
+            await tokenStorage.removeToken();
+        } catch (error) {
+            console.error('Error removing token:', error);
+        }
+
+        console.log('Going back to login');
+        navigation.navigate("LogoutWebView");
     };
 
     return (
@@ -157,22 +181,31 @@ const Home = async () => {
                         </Text>
                     )}
                     {!connected && isLoadingToken && (
-                        <Text style={{ color: '#fff', marginTop: 10 }}>Loading token...</Text>
+                        <Text style={{color: '#fff', marginTop: 10}}>Loading token...</Text>
                     )}
                     {!connected && !isLoadingToken && (
-                        <Button  onPress={() => {
+                        <Button onPress={() => {
                             if (token) {
-                                startSDK(token).then(() => console.log("SDK started"));
+                                startSDK(token).then(() => {
+                                    console.log("SDK started")
+                                    setConnected(true);
+                                }).catch(
+                                    (error) => {
+                                        console.error("Error starting SDK:", error);
+                                        setConnected(false);
+                                    }
+                                );
                             }
                         }}
-                                 label={`Connect: sdkVersion - ${sdkVersion}`} disabled={false} style={styles.connectButton}/>
+                                label={`Connect: sdkVersion - ${sdkVersion}`} disabled={false}
+                                style={styles.connectButton}/>
                     )}
                 </View>
                 <View style={styles.earnings}>
                     <Text style={styles.earningsLabel}>Earnings:</Text>
                     <View style={styles.earningsValue}>
                         <Image source={icon_coin} style={styles.icon}/>
-                        <Text style={styles.earningsText}>{todayEarnings}</Text>
+                        <Text style={styles.earningsText}>{numeral((earnings?.epoch_earnings ?? 0) + (earnings?.today_earnings ?? 0)).format('0,0')}</Text>
                     </View>
                 </View>
             </View>

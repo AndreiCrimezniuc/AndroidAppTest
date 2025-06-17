@@ -3,7 +3,7 @@ import WebView from 'react-native-webview';
 import Constants from 'expo-constants';
 import {WebViewNavigationEvent} from "react-native-webview/lib/RNCWebViewNativeComponent";
 import React from "react";
-import {GRID_HARD_LINK_BASE, REGISTER_URL} from "../../service/auth/links";
+import {GRID_HARD_LINK_BASE, REGISTER_URL} from "../../service/links";
 import {handleLoginRedirect, handleRegisterRedirect} from "../../service/auth/auth";
 import {useNavigation} from "@react-navigation/native";
 

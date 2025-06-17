@@ -1,5 +1,5 @@
 import { parseUrl } from 'query-string';
-import {AUTH_LINK, CLIENT_ID, CLIENT_SECRET, KEYCLOAK_BASE_URL, AFTER_REGISTRATION_REDIRECT_URL} from "./links";
+import {AUTH_LINK, CLIENT_ID, CLIENT_SECRET, KEYCLOAK_BASE_URL, AFTER_REGISTRATION_REDIRECT_URL} from "../links";
 import { tokenStorage } from '../storage/tokenStorage';
 
 // @ts-ignore

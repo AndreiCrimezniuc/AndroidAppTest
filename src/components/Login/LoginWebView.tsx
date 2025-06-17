@@ -3,7 +3,7 @@ import WebView, { WebViewNavigation } from 'react-native-webview';
 import Constants from 'expo-constants';
 import { useNavigation } from '@react-navigation/native';
 import React from "react";
-import {AUTH_LINK} from "../../service/auth/links";
+import {AUTH_LINK} from "../../service/links";
 import {handleLoginRedirect} from "../../service/auth/auth";
 
 

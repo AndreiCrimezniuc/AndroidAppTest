@@ -1,4 +1,4 @@
-import {useEffect, useState} from 'react';
+import {useEffect, useRef, useState} from 'react';
 import {StyleSheet, Text, TouchableOpacity, View} from 'react-native';
 import {Button} from '@react-navigation/elements';
 import {Image} from 'expo-image';
@@ -9,35 +9,42 @@ import React from "react";
 const Login = () => {
     const [showLogin, setShowLogin] = useState(false);
     const [showRegister, setShowRegister] = useState(false);
+    const initRef = useRef(false);
 
     function handleRedirect(linkType: 'auth' | 'register') {
         linkType === 'auth' ? setShowLogin(true) : setShowRegister(true);
     }
 
     useEffect(() => {
-        const checkAuth = async () => {
-            // try {
-            //   const isAuthenticated = await IsAuthenticated();
-            //   if (isAuthenticated) {
-            //     navigation.navigate('Home');
-            //   }
-            // } catch (error) {
-            //   LogPrint("Authentication check failed" + error);
-            //  }
-        };
+        // Prevent double execution in React Strict Mode
+        if (initRef.current) return;
+        initRef.current = true;
 
-        checkAuth();
+
+        // const checkAuth = async () => {
+        //     try {
+        //         const isAuthenticated = await IsAuthenticated();
+        //         if (isAuthenticated) {
+        //             navigation.navigate('Home');
+        //         }
+        //     } catch (error) {
+        //         LogPrint("Authentication check failed" + error);
+        //     }
+        // };
+        // checkAuth();
+
+        console.log('Login component mounted');
     }, []);
 
     if (showLogin) {
         return (
-                <LoginWebView />
+            <LoginWebView />
         );
     }
 
     if (showRegister) {
         return (
-                <RegisterWebView />
+            <RegisterWebView />
         );
     }
 
