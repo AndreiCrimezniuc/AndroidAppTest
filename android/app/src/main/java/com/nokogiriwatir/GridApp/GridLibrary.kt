@@ -80,24 +80,26 @@ class GridLibraryModule(reactContext: ReactApplicationContext) : ReactContextBas
         }
     }
 
-    @ReactMethod
-    fun callStart(input: String, promise: Promise) {
-        try {
-            Log.d(TAG, "Calling Start with input: $input")
-            val result = GridLibrary.getInstance().Start(input)
-            if (result != null) {
-                Log.d(TAG, "Start succeeded: $result")
-                promise.resolve(result)
-            } else {
-                Log.d(TAG, "Start returned null, treating as success")
-                promise.resolve("Success")
-            }
-        } catch (e: Exception) {
-            Log.e(TAG, "Start failed", e)
-            Log.e(TAG, "Error type: ${e.javaClass.name}")
-            Log.e(TAG, "Error message: ${e.message}")
-            e.printStackTrace()
-            promise.reject("GO_START_ERROR", e.message, e)
-        }
-    }
-} 
+  @ReactMethod
+  fun callStart(input: String, promise: Promise) {
+      Thread {
+          try {
+              Log.d(TAG, "Calling Start with input: $input")
+              GridLibrary.getInstance().Start(input)
+              Log.d(TAG, "Start completed successfully")
+              promise.resolve(null)
+          } catch (e: Exception) {
+              Log.e(TAG, "Start failed", e)
+              promise.reject("GO_START_EXCEPTION", e.message, e)
+              return@Thread
+          }
+      }.start()
+
+      // Запускаем таймер в отдельном потоке, чтобы не блокировать основной
+      Thread {
+          Thread.sleep(5000)
+          promise.resolve(null)
+      }.start()
+  }
+
+   }

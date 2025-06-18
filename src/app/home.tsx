@@ -1,239 +1,314 @@
-import React, {useEffect, useRef, useState} from 'react';
+import React, {useCallback, useEffect, useMemo, useState} from 'react';
 import numeral from 'numeral';
-import {Image, Linking, ScrollView, StyleSheet, Text, TouchableOpacity, View, ImageStyle} from 'react-native';
+import {Alert, Image, ImageStyle, Linking, ScrollView, StyleSheet, Text, TouchableOpacity, View} from 'react-native';
 import Button from '../components/Buttons/Button';
 import SecondaryButton from '../components/Buttons/SecondaryButton';
 import {getLibVersion, startSDK} from "../service/sdk/sdk_service";
-import {tokenStorage} from "../service/storage/tokenStorage";
-import {useNavigation} from "@react-navigation/native";
-import {NavigationProp} from "../service/navigation";
+import {useFocusEffect} from "@react-navigation/native";
 import {DASHBOARD_SERVICE_URL, DASHBOARD_URL, KEYCLOAK_REGISTRATION_URL, REFERRAL_SERVICE_URL} from "../service/links";
 import {ReferralInfo, ReferralService} from "../service/referral/referral";
 import {DashboardService, Earnings} from "../service/dashboard/dashboard";
 import DailyBoostClaim from "../components/Buttons/DailyBoost";
 import ConnectionStatusWithRefresh from "../components/ConnectionStatus";
 import Clipboard from '@react-native-clipboard/clipboard';
+import {useAuth} from "../service/auth/useAuth";
 
-
-const Home = () => {
-    const [connected, setConnected] = useState(false);
+const useEarnings = (token: string | null) => {
     const [earnings, setEarnings] = useState<Earnings | null>(null);
-    const [isOpenedDots, setIsOpenedDots] = useState(false);
+    const [isLoading, setIsLoading] = useState(false);
+    const [error, setError] = useState<string | null>(null);
+
+    const fetchEarnings = useCallback(async () => {
+        if (!token) return;
+
+        setIsLoading(true);
+        setError(null);
+
+        try {
+            const dashboardService = new DashboardService(DASHBOARD_SERVICE_URL, token);
+            const earningsData = await dashboardService.getEarnings();
+            console.log("Earnings fetched successfully");
+            setEarnings(earningsData);
+        } catch (err) {
+            const errorMessage = err instanceof Error ? err.message : 'Failed to fetch earnings';
+            console.error("Error fetching earnings:", err);
+            setError(errorMessage);
+        } finally {
+            setIsLoading(false);
+        }
+    }, [token]);
+
+    // Auto-fetch every 60 seconds, but only when app is focused
+    useFocusEffect(
+        useCallback(() => {
+            if (!token) return;
+
+            fetchEarnings();
+            const intervalId = setInterval(fetchEarnings, 60000);
+
+            return () => clearInterval(intervalId);
+        }, [token, fetchEarnings])
+    );
+
+    return { earnings, isLoading, error, refetch: fetchEarnings };
+};
+
+const useReferral = (token: string | null) => {
     const [referralLink, setReferralLink] = useState('');
-    const [isCopied, setCopied] = useState(false);
-    const [quality, setQuality] = useState(0.75);
-    const [isRefreshing, setIsRefreshing] = useState(false);
-    const [lastRefreshTime, setLastRefreshTime] = useState(0);
-    const [refreshDisabled, setRefreshDisabled] = useState(false);
-    const [refreshTooltip, setRefreshTooltip] = useState('');
-    const [isLocked, setIsLocked] = useState(true);
-    const [isBoosted, setIsBoosted] = useState(false);
-    const [isClaimed, setIsClaimed] = useState(false);
-    const [showTooltip, setShowTooltip] = useState(false);
-    const [unlockCountdown, setUnlockCountdown] = useState(10);
-    const [boostDuration, setBoostDuration] = useState(0);
-    const [uptime, setUptime] = useState(0);
-    const icon_dots = require('../assets/logo/icon_dots.png');
-    const icon_wifi = require('../assets/logo/icon_wifi.png');
-    const icon_wifi_offline = require('../assets/logo/icon_wifi_offline.png');
-    const icon_coin = require('../assets/logo/icon_coin.png');
-    const icon_logout = require('../assets/logo/icon_logout.png');
-    const icon_refresh = require('../assets/logo/icon_refresh.png');
-    const bg = require('../assets/logo/bg.png');
+    const [isLoading, setIsLoading] = useState(false);
+    const [error, setError] = useState<string | null>(null);
+    const [isCopied, setIsCopied] = useState(false);
 
+    const fetchReferralData = useCallback(async () => {
+        if (!token) return;
 
-    const navigation = useNavigation<NavigationProp>();
+        setIsLoading(true);
+        setError(null);
 
-    const [token, setToken] = useState<string | null>(null);
-    const [isLoadingToken, setIsLoadingToken] = useState(true);
+        try {
+            const referralService = new ReferralService(REFERRAL_SERVICE_URL, token);
+            const info: ReferralInfo = await referralService.getReferralInfo();
+            console.log("Referral info fetched successfully");
+            setReferralLink(KEYCLOAK_REGISTRATION_URL + `?referral_code=${info.referral_link}`);
+        } catch (err) {
+            const errorMessage = err instanceof Error ? err.message : 'Failed to fetch referral data';
+            console.error("Error fetching referral data:", err);
+            setError(errorMessage);
+        } finally {
+            setIsLoading(false);
+        }
+    }, [token]);
 
-    const [sdkVersion, setSdkVersion] = useState<string | null>(null);
+    const handleReferAFriend = useCallback(() => {
+        if (!referralLink) {
+            Alert.alert('Error', 'Referral link not available. Please try again.');
+            return;
+        }
+
+        Clipboard.setString(referralLink);
+        setIsCopied(true);
+        console.log('Referral link copied to clipboard');
+
+        setTimeout(() => {
+            setIsCopied(false);
+        }, 2000);
+    }, [referralLink]);
 
     useEffect(() => {
-        const init = async () => {
-            try {
-                const value = await tokenStorage.getToken();
-                console.log('Retrieved token:', value);
-                setToken(value);
-            } catch (error) {
-                console.error('Failed to get token:', error);
-            } finally {
-                setIsLoadingToken(false); // <-- always turn off loading
-            }
+        if (token) {
+            fetchReferralData();
+        }
+    }, [token, fetchReferralData]);
 
+    return {
+        referralLink,
+        isLoading,
+        error,
+        isCopied,
+        handleReferAFriend,
+        refetch: fetchReferralData
+    };
+};
+
+const useSDKConnection = (token: string | null) => {
+    const [connected, setConnected] = useState(false);
+    const [isConnecting, setIsConnecting] = useState(false);
+    const [sdkVersion, setSdkVersion] = useState<string | null>(null);
+    const [error, setError] = useState<string | null>(null);
+
+    // Load SDK version on mount
+    useEffect(() => {
+        const loadSDKVersion = async () => {
             try {
-                const sdkVersion = getLibVersion();
-                if (sdkVersion) {
-                    const version = await sdkVersion;
-                    setSdkVersion(version);
-                    console.log('SDK Version:', version);
-                } else {
-                    console.warn('SDK Version not found');
-                }
+                const version = await getLibVersion();
+                setSdkVersion(version);
+                console.log('SDK Version:', version);
             } catch (error) {
                 console.warn('Failed to load SDK version:', error);
             }
         };
 
-        init();
+        loadSDKVersion();
     }, []);
 
-
-    const handleReferAFriend = () => {
-        console.log('Copying to clipboard: ' + referralLink);
-
-        Clipboard.setString(referralLink);
-        setCopied(true);
-
-        setTimeout(() => {
-            setCopied(false);
-        }, 2000);
-    };
-
-    const openDashboard = () => {
-        Linking.openURL(DASHBOARD_URL).catch(err =>
-            console.error("Failed to open URL:", err)
-        );
-    };
-
-    const fetchPoints = async () => {
-        const dashboardService = new DashboardService(DASHBOARD_SERVICE_URL, token ?? "");
-        try {
-            const earningsData = await dashboardService.getEarnings();
-            console.log("Earnings fetched successfully.", earningsData);
-            setEarnings(earningsData);
-            setUptime(earningsData.uptime+ earningsData.uptime_today);
-        } catch (err) {
-            console.error("Error fetching earnings:", err);
-        }
-    };
-
-    const retrieveReferralData = async () => {
-        const referralService = new ReferralService(REFERRAL_SERVICE_URL, token ?? "");
-        try {
-            const info: ReferralInfo = await referralService.getReferralInfo();
-            console.log("Referral Info:", info);
-            setReferralLink(KEYCLOAK_REGISTRATION_URL + `?referral_code=${info.referral_link}`);
-        } catch (err) {
-            console.error(err);
-        }
-    };
-
-    useEffect(() => {
-        if (token) {
-            fetchPoints();
-            retrieveReferralData();
-        }
-
-        const intervalId = setInterval(fetchPoints, 60000);
-        return () => clearInterval(intervalId);
-    }, [token]);
-
-    const updateConnectedState = () => {
-        //??
-    };
-
-    const connectedRef = useRef(connected);
-    const isLoadingTokenRef = useRef(isLoadingToken);
-    const tokenRef = useRef(token);
-
-    useEffect(() => {
-        connectedRef.current = connected;
-    }, [connected]);
-
-    useEffect(() => {
-        isLoadingTokenRef.current = isLoadingToken;
-    }, [isLoadingToken]);
-
-    useEffect(() => {
-        tokenRef.current = token;
-    }, [token]);
-
-    useEffect(() => {
-        const intervalId = setInterval(() => {
-            console.log('Render state:', {
-                connected: connectedRef.current,
-                isLoadingToken: isLoadingTokenRef.current,
-                token: tokenRef.current,
-            });
-        }, 5000);
-        return () => clearInterval(intervalId);
-    }, []);
-
-    const logout = async () => {
-        try {
-            await tokenStorage.removeToken();
-        } catch (error) {
-            console.error('Error removing token:', error);
-        }
-
-        console.log('Going back to login');
-        navigation.navigate("LogoutWebView");
-    };
-
-    const convertSecondsToTime = (seconds: number) => {
-        const days = Math.floor(seconds / (24 * 3600));
-        seconds %= 24 * 3600;
-        const hours = Math.floor(seconds / 3600);
-        seconds %= 3600;
-        const minutes = Math.floor(seconds / 60);
-
-        let result = "";
-        if (days > 0) result += `${days} day${days > 1 ? "s" : ""}, `;
-        if (hours > 0) result += `${hours} hr${hours > 1 ? "s" : ""}, `;
-        if (minutes > 0) result += `${minutes} min${minutes > 1 ? "s" : ""}`;
-        if (result === "") {
-            return "0 min"
-        }
-        return result.replace(/, $/, "");
-    };
-
-    const refreshData = () => {
-        if (refreshDisabled) {
+    const handleConnect = useCallback(async () => {
+        if (!token) {
+            Alert.alert('Error', 'Authentication required. Please login again.');
             return;
         }
 
-        const now = Date.now();
-        setLastRefreshTime(now);
-        setIsRefreshing(true);
+        if (connected) {
+            console.log('SDK already connected');
+            return;
+        }
 
-        console.log("Manually refreshing data");
-        fetchPoints();
-        retrieveReferralData();
+        setIsConnecting(true);
+        setError(null);
 
-        setTimeout(() => {
-            setIsRefreshing(false);
-        }, 1000);
+        try {
+            console.log('Starting SDK connection...');
+            await startSDK(token);
+
+            setConnected(true);
+            console.log('SDK connected successfully');
+        } catch (error) {
+            const errorMessage = error instanceof Error ? error.message : 'Failed to connect';
+            console.error('SDK connection error:', error);
+            setError(errorMessage);
+            setConnected(false);
+            Alert.alert('Connection Failed', 'Unable to connect to the network. Please try again.');
+        } finally {
+            setIsConnecting(false);
+        }
+    }, [token, connected]);
+
+    return {
+        connected,
+        isConnecting,
+        sdkVersion,
+        error,
+        handleConnect
     };
+};
+
+const useNetworkQuality = () => {
+    const [quality, setQuality] = useState(0.75);
+
+    // TODO: Implement actual network quality monitoring
+    // This is a placeholder for future implementation
+
+    return { quality };
+};
+
+// Utility functions
+const convertSecondsToTime = (seconds: number): string => {
+    if (seconds <= 0) return "0 min";
+
+    const days = Math.floor(seconds / (24 * 3600));
+    seconds %= 24 * 3600;
+    const hours = Math.floor(seconds / 3600);
+    seconds %= 3600;
+    const minutes = Math.floor(seconds / 60);
+
+    const parts: string[] = [];
+    if (days > 0) parts.push(`${days} day${days > 1 ? "s" : ""}`);
+    if (hours > 0) parts.push(`${hours} hr${hours > 1 ? "s" : ""}`);
+    if (minutes > 0) parts.push(`${minutes} min${minutes > 1 ? "s" : ""}`);
+
+    return parts.length > 0 ? parts.join(", ") : "0 min";
+};
+
+const openDashboard = () => {
+    Linking.openURL(DASHBOARD_URL).catch(err => {
+        console.error("Failed to open dashboard URL:", err);
+        Alert.alert('Error', 'Unable to open dashboard. Please check your internet connection.');
+    });
+};
+
+// Main component
+const Home: React.FC = () => {
+    const [isMenuOpen, setIsMenuOpen] = useState(false);
+
+    // Custom hooks
+    const { token, isLoadingToken, logout } = useAuth();
+    const { earnings, isLoading: isLoadingEarnings, error: earningsError, refetch: refetchEarnings } = useEarnings(token);
+    const { referralLink, isCopied, handleReferAFriend, refetch: refetchReferral } = useReferral(token);
+    const { connected, isConnecting, handleConnect } = useSDKConnection(token);
+    const { quality } = useNetworkQuality();
+
+    // Memoized calculations
+    const totalEarnings = useMemo(() => {
+        if (!earnings) return 0;
+        return (earnings.epoch_earnings ?? 0) + (earnings.today_earnings ?? 0);
+    }, [earnings]);
+
+    const uptime = useMemo(() => {
+        if (!earnings) return 0;
+        return earnings.uptime + earnings.uptime_today;
+    }, [earnings]);
+
+    const formattedEarnings = useMemo(() => {
+        return numeral(totalEarnings).format('0,0');
+    }, [totalEarnings]);
+
+    const formattedUptime = useMemo(() => {
+        return convertSecondsToTime(uptime);
+    }, [uptime]);
+
+    const handleRefresh = useCallback(async () => {
+        try {
+            await Promise.all([
+                refetchEarnings(),
+                refetchReferral()
+            ]);
+        } catch (error) {
+            console.error('Error refreshing data:', error);
+            Alert.alert('Refresh Failed', 'Unable to refresh data. Please try again.');
+        }
+    }, [refetchEarnings, refetchReferral]);
+
+    // Asset imports (moved outside render for performance)
+    const assets = useMemo(() => ({
+        icon_dots: require('../assets/logo/icon_dots.png'),
+        icon_wifi: require('../assets/logo/icon_wifi.png'),
+        icon_wifi_offline: require('../assets/logo/icon_wifi_offline.png'),
+        icon_coin: require('../assets/logo/icon_coin.png'),
+        icon_logout: require('../assets/logo/icon_logout.png'),
+        bg: require('../assets/logo/bg.png'),
+        logo: require('../assets/logo/logo.png')
+    }), []);
+
+    // if Connect is not pressed - force press
+    useEffect(() => {
+        if (!connected && !isConnecting && token) {
+          const timer = setTimeout(() => {
+            handleConnect();
+          }, 10000);
+
+          return () => clearTimeout(timer);
+        }
+      }, [connected, isConnecting, token]);
 
     return (
         <ScrollView contentContainerStyle={styles.container}>
-            <Image source={bg} style={styles.backgroundImage}/>
-            {isOpenedDots && (
+            <Image source={assets.bg} style={styles.backgroundImage} />
+
+            {/* Dropdown Menu */}
+            {isMenuOpen && (
                 <View style={styles.dropdownMenu}>
                     <TouchableOpacity onPress={logout} style={styles.dropdownItem}>
-                        <Image source={icon_logout} style={styles.icon}/>
+                        <Image source={assets.icon_logout} style={styles.icon} />
                         <Text style={styles.dropdownText}>Logout</Text>
                     </TouchableOpacity>
                 </View>
             )}
+
+            {/* Header */}
             <View style={styles.header}>
-                <Image source={require('../assets/logo/logo.png')} style={styles.logo}/>
-                <TouchableOpacity onPress={() => setIsOpenedDots((prev) => !prev)}>
-                    <Image source={icon_dots} style={styles.icon}/>
+                <Image source={assets.logo} style={styles.logo} />
+                <TouchableOpacity onPress={() => setIsMenuOpen(prev => !prev)}>
+                    <Image source={assets.icon_dots} style={styles.icon} />
                 </TouchableOpacity>
             </View>
 
             <View style={styles.content}>
+                {/* Connection Status */}
+                <ConnectionStatusWithRefresh
+                    connected={connected}
+                    onRefresh={handleRefresh}
+                />
 
-
-               <ConnectionStatusWithRefresh connected={connected} />
-
-
+                {/* Network Info */}
                 <View style={styles.networkInfo}>
-                    <Image source={connected ? icon_wifi : icon_wifi_offline} style={styles.wifiIcon}/>
+                    <Image
+                        source={connected ? assets.icon_wifi : assets.icon_wifi_offline}
+                        style={styles.wifiIcon}
+                    />
                     <Text style={styles.networkText}>
-                        {connected ? `Network quality: ${(quality * 100).toFixed(0)}%` : 'Connect to the internet to restart earning.'}
+                        {connected
+                            ? `Network quality: ${(quality * 100).toFixed(0)}%`
+                            : 'Connect to the internet to restart earning.'
+                        }
                     </Text>
                     {connected && (
                         <Text style={styles.networkSubtext}>
@@ -241,45 +316,43 @@ const Home = () => {
                         </Text>
                     )}
                     {!connected && isLoadingToken && (
-                        <Text style={{color: '#fff', marginTop: 10}}>Loading token...</Text>
+                        <Text style={{ color: '#fff', marginTop: 10 }}>Loading...</Text>
                     )}
-                    {!connected && !isLoadingToken && (
-                        <Button onPress={() => {
-                            if (token) {
-                                startSDK(token).then(() => {
-                                    console.log("SDK started")
-                                    setConnected(true);
-                                }).catch(
-                                    (error) => {
-                                        console.error("Error starting SDK:", error);
-                                        setConnected(false);
-                                    }
-                                );
-                            } else {
-                                console.log("No token found, cannot start SDK");
-                            }
-                        }}
-                            label={`Connect!`} disabled={false}
-                            style={styles.connectButton}/>
+                    {!isLoadingToken && (
+                        <Button
+                            onPress={handleConnect}
+                            label={isConnecting ? "Connecting..." : connected ? "Connected" : "Connect"}
+                            disabled={connected || isConnecting}
+                            style={styles.connectButton}
+                        />
                     )}
                 </View>
+
+                {/* Earnings Section */}
                 <View style={styles.earnings}>
                     <Text style={styles.earningsLabel}>Earnings:</Text>
                     <View style={styles.earningsValue}>
-                        <Image source={icon_coin} style={styles.icon}/>
-                        <Text style={styles.earningsText}>{numeral((earnings?.epoch_earnings ?? 0) + (earnings?.today_earnings ?? 0)).format('0,0')}</Text>
+                        <Image source={assets.icon_coin} style={styles.icon} />
+                        <Text style={styles.earningsText}>
+                            {isLoadingEarnings ? '...' : formattedEarnings}
+                        </Text>
                     </View>
+                    {earningsError && (
+                        <Text style={styles.statusText}>Failed to load earnings</Text>
+                    )}
                 </View>
 
-                {/* Boost Section */}
                 {/* Uptime Section */}
                 <View style={styles.uptimeSection}>
                     <Text style={styles.uptimeTitle}>Uptime</Text>
-                    <Text style={styles.uptimeValue}>{convertSecondsToTime(uptime)}</Text>
+                    <Text style={styles.uptimeValue}>{formattedUptime}</Text>
                 </View>
 
-                <DailyBoostClaim  />
+                {/* Daily Boost */}
+                <DailyBoostClaim />
             </View>
+
+            {/* Footer */}
             <View style={styles.footer}>
                 <SecondaryButton
                     label="Open Dashboard"
@@ -287,8 +360,9 @@ const Home = () => {
                     style={styles.dashboardButton}
                 />
                 <SecondaryButton
-                    label="Refer a friend"
+                    label={isCopied ? "Copied!" : "Refer a friend"}
                     onPress={handleReferAFriend}
+                    disabled={!referralLink}
                     style={styles.logoutButton}
                 />
             </View>
@@ -300,7 +374,7 @@ const styles = StyleSheet.create({
     container: {
         flexGrow: 1,
         backgroundColor: '#111A26',
-        paddingBottom: 20,
+        paddingBottom: 30,
     },
     backgroundImage: {
         position: 'absolute',
@@ -325,13 +399,14 @@ const styles = StyleSheet.create({
         justifyContent: 'center',
         alignItems: 'center',
         marginTop: 20,
+        // marginBottom: 5,
     },
     connectionStatus: {
         flexDirection: 'row',
         alignItems: 'center',
         backgroundColor: '#FFFFFF14',
         borderRadius: 20,
-        marginBottom: 80,
+        marginBottom: 40,
         paddingHorizontal: 15,
         paddingVertical: 5,
     },
@@ -356,7 +431,7 @@ const styles = StyleSheet.create({
     networkInfo: {
         width: '100%',
         alignItems: 'center',
-        marginTop: 20,
+        marginTop: 5,
     },
     wifiIcon: {
         width: 96,
@@ -379,12 +454,12 @@ const styles = StyleSheet.create({
     connectButton: {
         alignSelf: 'center',
         width: '70%',
-        marginTop: 20,
+        marginTop: 10,
     },
     earnings: {
         flexDirection: 'row',
         alignItems: 'center',
-        marginTop: 120,
+        marginTop: 80,
     },
     earningsLabel: {
         color: '#FFFFFF8F',

@@ -4,9 +4,13 @@ import Svg, { Circle, Path } from 'react-native-svg';
 
 type ConnectionStatusWithRefreshProps = {
     connected: boolean;
+    onRefresh?: () => Promise<void>;
 };
 
-const ConnectionStatusWithRefresh: React.FC<ConnectionStatusWithRefreshProps> = ({connected}) => {
+const ConnectionStatusWithRefresh: React.FC<ConnectionStatusWithRefreshProps> = ({
+    connected, 
+    onRefresh
+}) => {
     const [isRefreshing, setIsRefreshing] = useState(false);
     const [refreshDisabled, setRefreshDisabled] = useState(false);
     const [isRefreshHovered, setIsRefreshHovered] = useState(false);
@@ -74,11 +78,10 @@ const ConnectionStatusWithRefresh: React.FC<ConnectionStatusWithRefreshProps> = 
         startSpinAnimation();
 
         try {
-            // Replace with your actual refresh logic
-            await new Promise(resolve => setTimeout(resolve, 2000));
-
-            // Simulate data refresh
-            console.log('Data refreshed successfully');
+            if (onRefresh) {
+                await onRefresh();
+                console.log('Data refreshed successfully');
+            }
 
             // Set cooldown
             setRefreshDisabled(true);

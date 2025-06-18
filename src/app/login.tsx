@@ -5,11 +5,15 @@ import {Image} from 'expo-image';
 import {LoginWebView} from "../components/Login/LoginWebView";
 import {RegisterWebView} from "../components/Login/RegisterWebView";
 import React from "react";
+import {tokenStorage} from "../service/storage/tokenStorage";
+import {useAuth} from "../service/auth/useAuth";
 
 const Login = () => {
     const [showLogin, setShowLogin] = useState(false);
     const [showRegister, setShowRegister] = useState(false);
     const initRef = useRef(false);
+
+    const { token, isLoadingToken } = useAuth();
 
     function handleRedirect(linkType: 'auth' | 'register') {
         linkType === 'auth' ? setShowLogin(true) : setShowRegister(true);
@@ -20,21 +24,15 @@ const Login = () => {
         if (initRef.current) return;
         initRef.current = true;
 
-
-        // const checkAuth = async () => {
-        //     try {
-        //         const isAuthenticated = await IsAuthenticated();
-        //         if (isAuthenticated) {
-        //             navigation.navigate('Home');
-        //         }
-        //     } catch (error) {
-        //         LogPrint("Authentication check failed" + error);
-        //     }
-        // };
-        // checkAuth();
-
         console.log('Login component mounted');
     }, []);
+
+    useEffect(() => {
+        if (!isLoadingToken && token) {
+            setShowLogin(true);
+        }
+    }, [isLoadingToken, token]);
+
 
     if (showLogin) {
         return (
