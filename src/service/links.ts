@@ -10,6 +10,7 @@ export const AUTH_LINK = `${KEYCLOAK_BASE_URL}/auth?client_id=${CLIENT_ID}
 export const POST_LOGOUT_REDIRECT = `${GRID_HARD_LINK_BASE}Index`
 export const LOGOUT_URL = `${KEYCLOAK_BASE_URL}/logout?client_id=${CLIENT_ID}&post_logout_redirect_uri=${POST_LOGOUT_REDIRECT}`
 export const DASHBOARD_URL = "https://app.getgrid.ai"
-export const KEYCLOAK_REGISTRATION_URL = `https://sso.getgrid.ai/realms/grid-prod/login-actions/registration?client_id=desktop-app&tab_id=LqrXVZCDP-o`
+export const KEYCLOAK_REGISTRATION_URL = `https://sso.getgrid.ai/registration`
+
 export const REFERRAL_SERVICE_URL = "https://api.getgrid.ai/referralservice"
 export const DASHBOARD_SERVICE_URL = "https://api.getgrid.ai/dashboard"

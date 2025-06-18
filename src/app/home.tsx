@@ -1,6 +1,6 @@
-import React, {useEffect, useState} from 'react';
+import React, {useEffect, useRef, useState} from 'react';
 import numeral from 'numeral';
-import {Image, Linking, ScrollView, StyleSheet, Text, TouchableOpacity, View} from 'react-native';
+import {Image, Linking, ScrollView, StyleSheet, Text, TouchableOpacity, View, ImageStyle} from 'react-native';
 import Button from '../components/Buttons/Button';
 import SecondaryButton from '../components/Buttons/SecondaryButton';
 import {getLibVersion, startSDK} from "../service/sdk/sdk_service";
@@ -10,6 +10,10 @@ import {NavigationProp} from "../service/navigation";
 import {DASHBOARD_SERVICE_URL, DASHBOARD_URL, KEYCLOAK_REGISTRATION_URL, REFERRAL_SERVICE_URL} from "../service/links";
 import {ReferralInfo, ReferralService} from "../service/referral/referral";
 import {DashboardService, Earnings} from "../service/dashboard/dashboard";
+import DailyBoostClaim from "../components/Buttons/DailyBoost";
+import ConnectionStatusWithRefresh from "../components/ConnectionStatus";
+import Clipboard from '@react-native-clipboard/clipboard';
+
 
 const Home = () => {
     const [connected, setConnected] = useState(false);
@@ -18,12 +22,23 @@ const Home = () => {
     const [referralLink, setReferralLink] = useState('');
     const [isCopied, setCopied] = useState(false);
     const [quality, setQuality] = useState(0.75);
+    const [isRefreshing, setIsRefreshing] = useState(false);
+    const [lastRefreshTime, setLastRefreshTime] = useState(0);
+    const [refreshDisabled, setRefreshDisabled] = useState(false);
+    const [refreshTooltip, setRefreshTooltip] = useState('');
+    const [isLocked, setIsLocked] = useState(true);
+    const [isBoosted, setIsBoosted] = useState(false);
+    const [isClaimed, setIsClaimed] = useState(false);
+    const [showTooltip, setShowTooltip] = useState(false);
+    const [unlockCountdown, setUnlockCountdown] = useState(10);
+    const [boostDuration, setBoostDuration] = useState(0);
+    const [uptime, setUptime] = useState(0);
     const icon_dots = require('../assets/logo/icon_dots.png');
     const icon_wifi = require('../assets/logo/icon_wifi.png');
     const icon_wifi_offline = require('../assets/logo/icon_wifi_offline.png');
     const icon_coin = require('../assets/logo/icon_coin.png');
-    const icon_refresh = require('../assets/logo/icon_refresh.png');
     const icon_logout = require('../assets/logo/icon_logout.png');
+    const icon_refresh = require('../assets/logo/icon_refresh.png');
     const bg = require('../assets/logo/bg.png');
 
 
@@ -37,12 +52,16 @@ const Home = () => {
     useEffect(() => {
         const init = async () => {
             try {
-                // Load token
                 const value = await tokenStorage.getToken();
+                console.log('Retrieved token:', value);
                 setToken(value);
-                setIsLoadingToken(false);
+            } catch (error) {
+                console.error('Failed to get token:', error);
+            } finally {
+                setIsLoadingToken(false); // <-- always turn off loading
+            }
 
-                // Load SDK version
+            try {
                 const sdkVersion = getLibVersion();
                 if (sdkVersion) {
                     const version = await sdkVersion;
@@ -52,7 +71,7 @@ const Home = () => {
                     console.warn('SDK Version not found');
                 }
             } catch (error) {
-                console.error('Initialization error:', error);
+                console.warn('Failed to load SDK version:', error);
             }
         };
 
@@ -60,10 +79,10 @@ const Home = () => {
     }, []);
 
 
-    const clipboardHandle = () => {
+    const handleReferAFriend = () => {
         console.log('Copying to clipboard: ' + referralLink);
 
-
+        Clipboard.setString(referralLink);
         setCopied(true);
 
         setTimeout(() => {
@@ -77,64 +96,68 @@ const Home = () => {
         );
     };
 
-    useEffect(() => {
-
-        const retrieveReferralData = () => {
-            const referralService = new ReferralService(REFERRAL_SERVICE_URL, token ?? "");
-
-            referralService.getReferralInfo()
-                .then((info: ReferralInfo) => {
-                    console.log("Referral Info:", info);
-                    setReferralLink(KEYCLOAK_REGISTRATION_URL + `?referral_code=${info.referral_link}`)
-                })
-                .catch((err: any) => {
-                    console.error(err);
-                });
+    const fetchPoints = async () => {
+        const dashboardService = new DashboardService(DASHBOARD_SERVICE_URL, token ?? "");
+        try {
+            const earningsData = await dashboardService.getEarnings();
+            console.log("Earnings fetched successfully.", earningsData);
+            setEarnings(earningsData);
+            setUptime(earningsData.uptime+ earningsData.uptime_today);
+        } catch (err) {
+            console.error("Error fetching earnings:", err);
         }
+    };
 
-        const fetchPoints = async () => {
-            const dashboardService = new DashboardService(DASHBOARD_SERVICE_URL, token ?? "");
+    const retrieveReferralData = async () => {
+        const referralService = new ReferralService(REFERRAL_SERVICE_URL, token ?? "");
+        try {
+            const info: ReferralInfo = await referralService.getReferralInfo();
+            console.log("Referral Info:", info);
+            setReferralLink(KEYCLOAK_REGISTRATION_URL + `?referral_code=${info.referral_link}`);
+        } catch (err) {
+            console.error(err);
+        }
+    };
 
-            const earnings = dashboardService.getEarnings().then((earningsData) => {
-                    console.log("Earnings fetched successfully.", earnings)
-                    setEarnings(earningsData)
-            }).catch((err: any) => console.error("Error fetching earnings:", err)
-            )
-        };
-
+    useEffect(() => {
         if (token) {
             fetchPoints();
-            retrieveReferralData()
+            retrieveReferralData();
         }
 
         const intervalId = setInterval(fetchPoints, 60000);
-
         return () => clearInterval(intervalId);
-    }, []);
-
-    useEffect(() => {
-        const fetchReferralLink = () => {
-            // ReferralLink()
-            //     .then((link) => {
-            //         setReferralLink(link);
-            //     })
-            //     .catch((err) => {
-            //         console.log('Error getting referral link: ' + err);
-            //     });
-        };
-        fetchReferralLink();
-    }, []);
+    }, [token]);
 
     const updateConnectedState = () => {
         //??
     };
 
-    useEffect(() => {
-        // EventsOn('connection:refresh_state', () => {
-        //     updateConnectedState();
-        // });
+    const connectedRef = useRef(connected);
+    const isLoadingTokenRef = useRef(isLoadingToken);
+    const tokenRef = useRef(token);
 
-        updateConnectedState();
+    useEffect(() => {
+        connectedRef.current = connected;
+    }, [connected]);
+
+    useEffect(() => {
+        isLoadingTokenRef.current = isLoadingToken;
+    }, [isLoadingToken]);
+
+    useEffect(() => {
+        tokenRef.current = token;
+    }, [token]);
+
+    useEffect(() => {
+        const intervalId = setInterval(() => {
+            console.log('Render state:', {
+                connected: connectedRef.current,
+                isLoadingToken: isLoadingTokenRef.current,
+                token: tokenRef.current,
+            });
+        }, 5000);
+        return () => clearInterval(intervalId);
     }, []);
 
     const logout = async () => {
@@ -146,6 +169,41 @@ const Home = () => {
 
         console.log('Going back to login');
         navigation.navigate("LogoutWebView");
+    };
+
+    const convertSecondsToTime = (seconds: number) => {
+        const days = Math.floor(seconds / (24 * 3600));
+        seconds %= 24 * 3600;
+        const hours = Math.floor(seconds / 3600);
+        seconds %= 3600;
+        const minutes = Math.floor(seconds / 60);
+
+        let result = "";
+        if (days > 0) result += `${days} day${days > 1 ? "s" : ""}, `;
+        if (hours > 0) result += `${hours} hr${hours > 1 ? "s" : ""}, `;
+        if (minutes > 0) result += `${minutes} min${minutes > 1 ? "s" : ""}`;
+        if (result === "") {
+            return "0 min"
+        }
+        return result.replace(/, $/, "");
+    };
+
+    const refreshData = () => {
+        if (refreshDisabled) {
+            return;
+        }
+
+        const now = Date.now();
+        setLastRefreshTime(now);
+        setIsRefreshing(true);
+
+        console.log("Manually refreshing data");
+        fetchPoints();
+        retrieveReferralData();
+
+        setTimeout(() => {
+            setIsRefreshing(false);
+        }, 1000);
     };
 
     return (
@@ -165,11 +223,13 @@ const Home = () => {
                     <Image source={icon_dots} style={styles.icon}/>
                 </TouchableOpacity>
             </View>
+
             <View style={styles.content}>
-                <View style={styles.connectionStatus}>
-                    <View style={[styles.statusDot, connected ? styles.connected : styles.disconnected]}/>
-                    <Text style={styles.statusText}>{connected ? 'Connected' : 'Disconnected'}</Text>
-                </View>
+
+
+               <ConnectionStatusWithRefresh connected={connected} />
+
+
                 <View style={styles.networkInfo}>
                     <Image source={connected ? icon_wifi : icon_wifi_offline} style={styles.wifiIcon}/>
                     <Text style={styles.networkText}>
@@ -195,10 +255,12 @@ const Home = () => {
                                         setConnected(false);
                                     }
                                 );
+                            } else {
+                                console.log("No token found, cannot start SDK");
                             }
                         }}
-                                label={`Connect: sdkVersion - ${sdkVersion}`} disabled={false}
-                                style={styles.connectButton}/>
+                            label={`Connect!`} disabled={false}
+                            style={styles.connectButton}/>
                     )}
                 </View>
                 <View style={styles.earnings}>
@@ -208,24 +270,27 @@ const Home = () => {
                         <Text style={styles.earningsText}>{numeral((earnings?.epoch_earnings ?? 0) + (earnings?.today_earnings ?? 0)).format('0,0')}</Text>
                     </View>
                 </View>
+
+                {/* Boost Section */}
+                {/* Uptime Section */}
+                <View style={styles.uptimeSection}>
+                    <Text style={styles.uptimeTitle}>Uptime</Text>
+                    <Text style={styles.uptimeValue}>{convertSecondsToTime(uptime)}</Text>
+                </View>
+
+                <DailyBoostClaim  />
             </View>
             <View style={styles.footer}>
                 <SecondaryButton
                     label="Open Dashboard"
                     onPress={openDashboard}
-                    disabled={false}
-                    style={styles.footerButton}
+                    style={styles.dashboardButton}
                 />
-                {!isCopied ? (
-                    <SecondaryButton
-                        label="Refer a friend"
-                        onPress={clipboardHandle}
-                        disabled={false}
-                        style={styles.footerButton}
-                    />
-                ) : (
-                    <Button label="Copied" disabled={false} style={styles.footerButton}/>
-                )}
+                <SecondaryButton
+                    label="Refer a friend"
+                    onPress={handleReferAFriend}
+                    style={styles.logoutButton}
+                />
             </View>
         </ScrollView>
     );
@@ -254,34 +319,6 @@ const styles = StyleSheet.create({
         height: 40,
         width: 100,
         resizeMode: 'contain',
-    },
-    icon: {
-        width: 24,
-        height: 24,
-    },
-    dropdownMenu: {
-        position: 'absolute',
-        right: 20,
-        top: 80,
-        backgroundColor: '#111A26',
-        borderRadius: 16,
-        padding: 10,
-        zIndex: 50,
-        shadowColor: '#000',
-        shadowOffset: {width: 0, height: 2},
-        shadowOpacity: 0.8,
-        shadowRadius: 2,
-        elevation: 5,
-    },
-    dropdownItem: {
-        flexDirection: 'row',
-        alignItems: 'center',
-        padding: 10,
-    },
-    dropdownText: {
-        color: '#FFF',
-        fontSize: 16,
-        marginLeft: 10,
     },
     content: {
         flex: 1,
@@ -370,9 +407,121 @@ const styles = StyleSheet.create({
         paddingHorizontal: 20,
         marginTop: 20,
     },
-    footerButton: {
+    dashboardButton: {
         flex: 1,
         marginHorizontal: 10,
+    },
+    logoutButton: {
+        flex: 1,
+        marginHorizontal: 10,
+    },
+    boostSection: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        marginTop: 20,
+    },
+    boostHeader: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        marginRight: 10,
+    },
+    boostTitle: {
+        color: '#FFFFFF8F',
+        fontSize: 16,
+        fontWeight: 'bold',
+    },
+    boostDuration: {
+        color: '#FFFFFF8F',
+        fontSize: 16,
+    },
+    boostContent: {
+        flexDirection: 'row',
+        alignItems: 'center',
+    },
+    boostActive: {
+        backgroundColor: '#0FC257',
+        borderRadius: 10,
+        padding: 5,
+    },
+    boostActiveText: {
+        color: '#FFF',
+        fontSize: 16,
+        fontWeight: 'bold',
+    },
+    boostInactive: {
+        backgroundColor: '#95A0C9',
+        borderRadius: 10,
+        padding: 5,
+    },
+    boostInactiveText: {
+        color: '#FFFFFF8F',
+        fontSize: 16,
+    },
+    uptimeSection: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        marginTop: 20,
+    },
+    uptimeTitle: {
+        color: '#FFFFFF8F',
+        fontSize: 16,
+        fontWeight: 'bold',
+    },
+    uptimeValue: {
+        color: '#FFFFFF8F',
+        fontSize: 16,
+        marginLeft: 10,
+    },
+    refreshButton: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        backgroundColor: '#FFFFFF14',
+        borderRadius: 10,
+        padding: 5,
+        gap: 5,
+    },
+    refreshButtonDisabled: {
+        backgroundColor: '#FFFFFF24',
+    },
+    refreshIcon: {
+        width: 24,
+        height: 24,
+    } as ImageStyle,
+    refreshIconSpinning: {
+        transform: [{ rotate: '360deg' }],
+    } as ImageStyle,
+    refreshTooltip: {
+        color: '#FFF',
+        fontSize: 16,
+        fontWeight: 'bold',
+    },
+    icon: {
+        width: 24,
+        height: 24,
+    },
+    dropdownMenu: {
+        position: 'absolute',
+        right: 20,
+        top: 80,
+        backgroundColor: '#111A26',
+        borderRadius: 16,
+        padding: 10,
+        zIndex: 50,
+        shadowColor: '#000',
+        shadowOffset: {width: 0, height: 2},
+        shadowOpacity: 0.8,
+        shadowRadius: 2,
+        elevation: 5,
+    },
+    dropdownItem: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        padding: 10,
+    },
+    dropdownText: {
+        color: '#FFF',
+        fontSize: 16,
+        marginLeft: 10,
     },
 });
 
