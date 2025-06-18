@@ -298,73 +298,77 @@ const Home: React.FC = () => {
                     onRefresh={handleRefresh}
                 />
 
-                {/* Network Info */}
-                <View style={styles.networkInfo}>
-                    <Image
-                        source={connected ? assets.icon_wifi : assets.icon_wifi_offline}
-                        style={styles.wifiIcon}
-                    />
-                    <Text style={styles.networkText}>
-                        {connected
-                            ? `Network quality: ${(quality * 100).toFixed(0)}%`
-                            : 'Connect to the internet to restart earning.'
-                        }
-                    </Text>
-                    {connected && (
-                        <Text style={styles.networkSubtext}>
-                            You're doing great! Keep connected to this network to earn.
-                        </Text>
-                    )}
-                    {!connected && isLoadingToken && (
-                        <Text style={{ color: '#fff', marginTop: 10 }}>Loading...</Text>
-                    )}
-                    {!isLoadingToken && (
-                        <Button
-                            onPress={handleConnect}
-                            label={isConnecting ? "Connecting..." : connected ? "Connected" : "Connect"}
-                            disabled={connected || isConnecting}
-                            style={styles.connectButton}
+                <View style={styles.mainContent}>
+                    {/* Network Info */}
+                    <View style={styles.networkInfo}>
+                        <Image
+                            source={connected ? assets.icon_wifi : assets.icon_wifi_offline}
+                            style={styles.wifiIcon}
                         />
-                    )}
-                </View>
-
-                {/* Earnings Section */}
-                <View style={styles.earnings}>
-                    <Text style={styles.earningsLabel}>Earnings:</Text>
-                    <View style={styles.earningsValue}>
-                        <Image source={assets.icon_coin} style={styles.icon} />
-                        <Text style={styles.earningsText}>
-                            {isLoadingEarnings ? '...' : formattedEarnings}
+                        <Text style={styles.networkText}>
+                            {connected
+                                ? `Network quality: ${(quality * 100).toFixed(0)}%`
+                                : 'Connect to the internet to restart earning.'
+                            }
                         </Text>
+                        {connected && (
+                            <Text style={styles.networkSubtext}>
+                                You're doing great!{'\n'}Keep connected to this network to earn.
+                            </Text>
+                        )}
+                        {!connected && isLoadingToken && (
+                            <Text style={{ color: '#fff', marginTop: 10 }}>Loading...</Text>
+                        )}
+                        {!isLoadingToken && (
+                            <Button
+                                onPress={handleConnect}
+                                label={isConnecting ? "Connecting..." : connected ? "Connected" : "Connect"}
+                                disabled={connected || isConnecting}
+                                style={styles.connectButton}
+                            />
+                        )}
                     </View>
-                    {earningsError && (
-                        <Text style={styles.statusText}>Failed to load earnings</Text>
-                    )}
+
+                    {/* Earnings Section */}
+                    <View style={styles.earnings}>
+                        <Text style={styles.earningsLabel}>Earnings:</Text>
+                        <View style={styles.earningsValue}>
+                            <Image source={assets.icon_coin} style={styles.icon} />
+                            <Text style={styles.earningsText}>
+                                {isLoadingEarnings ? '...' : formattedEarnings}
+                            </Text>
+                        </View>
+                        {earningsError && (
+                            <Text style={styles.statusText}>Failed to load earnings</Text>
+                        )}
+                    </View>
+
+                    {/* Uptime Section */}
+                    <View style={styles.uptimeSection}>
+                        <Text style={styles.uptimeTitle}>Uptime</Text>
+                        <Text style={styles.uptimeValue}>{formattedUptime}</Text>
+                    </View>
                 </View>
 
-                {/* Uptime Section */}
-                <View style={styles.uptimeSection}>
-                    <Text style={styles.uptimeTitle}>Uptime</Text>
-                    <Text style={styles.uptimeValue}>{formattedUptime}</Text>
+                <View style={styles.bottomContent}>
+                    {/* Daily Boost */}
+                    <DailyBoostClaim />
+
+                    {/* Footer */}
+                    <View style={styles.footer}>
+                        <SecondaryButton
+                            label="Open Dashboard"
+                            onPress={openDashboard}
+                            style={styles.dashboardButton}
+                        />
+                        <SecondaryButton
+                            label={isCopied ? "Copied!" : "Refer a friend"}
+                            onPress={handleReferAFriend}
+                            disabled={!referralLink}
+                            style={styles.logoutButton}
+                        />
+                    </View>
                 </View>
-
-                {/* Daily Boost */}
-                <DailyBoostClaim />
-            </View>
-
-            {/* Footer */}
-            <View style={styles.footer}>
-                <SecondaryButton
-                    label="Open Dashboard"
-                    onPress={openDashboard}
-                    style={styles.dashboardButton}
-                />
-                <SecondaryButton
-                    label={isCopied ? "Copied!" : "Refer a friend"}
-                    onPress={handleReferAFriend}
-                    disabled={!referralLink}
-                    style={styles.logoutButton}
-                />
             </View>
         </ScrollView>
     );
@@ -374,7 +378,7 @@ const styles = StyleSheet.create({
     container: {
         flexGrow: 1,
         backgroundColor: '#111A26',
-        paddingBottom: 30,
+        paddingBottom: 20,
     },
     backgroundImage: {
         position: 'absolute',
@@ -386,8 +390,8 @@ const styles = StyleSheet.create({
         flexDirection: 'row',
         justifyContent: 'space-between',
         alignItems: 'center',
-        padding: 20,
-        marginTop: 20,
+        padding: 15,
+        marginTop: 10,
     },
     logo: {
         height: 40,
@@ -396,17 +400,32 @@ const styles = StyleSheet.create({
     },
     content: {
         flex: 1,
+        justifyContent: 'space-between',
+        alignItems: 'center',
+        marginTop: 60,
+        paddingTop: 0,
+    },
+    mainContent: {
+        flex: 1,
         justifyContent: 'center',
         alignItems: 'center',
-        marginTop: 20,
-        // marginBottom: 5,
+        width: '100%',
+        paddingVertical: 20,
+        paddingTop: 40,
+    },
+    bottomContent: {
+        width: '100%',
+        marginBottom: 20,
+        alignItems: 'center',
+        justifyContent: 'flex-end',
+        paddingBottom: 20,
     },
     connectionStatus: {
         flexDirection: 'row',
         alignItems: 'center',
         backgroundColor: '#FFFFFF14',
         borderRadius: 20,
-        marginBottom: 40,
+        marginBottom: 0,
         paddingHorizontal: 15,
         paddingVertical: 5,
     },
@@ -431,11 +450,12 @@ const styles = StyleSheet.create({
     networkInfo: {
         width: '100%',
         alignItems: 'center',
-        marginTop: 5,
+        marginTop: 0,
+        marginBottom: 40,
     },
     wifiIcon: {
-        width: 96,
-        height: 96,
+        width: 80,
+        height: 80,
         resizeMode: 'contain',
     },
     networkText: {
@@ -443,23 +463,24 @@ const styles = StyleSheet.create({
         fontSize: 16,
         fontWeight: 'bold',
         textAlign: 'center',
-        marginTop: 10,
+        marginTop: 20,
     },
     networkSubtext: {
         color: '#FFFFFF8F',
         fontSize: 14,
         textAlign: 'center',
-        marginTop: 5,
+        marginTop: 15,
     },
     connectButton: {
         alignSelf: 'center',
         width: '70%',
-        marginTop: 10,
+        marginTop: 15,
     },
     earnings: {
         flexDirection: 'row',
         alignItems: 'center',
-        marginTop: 80,
+        marginTop: 0,
+        marginBottom: 15,
     },
     earningsLabel: {
         color: '#FFFFFF8F',
@@ -477,10 +498,11 @@ const styles = StyleSheet.create({
         marginLeft: 5,
     },
     footer: {
+        width: '100%',
         flexDirection: 'row',
         justifyContent: 'space-between',
         paddingHorizontal: 20,
-        marginTop: 20,
+        marginTop: 30,
     },
     dashboardButton: {
         flex: 1,
@@ -490,52 +512,11 @@ const styles = StyleSheet.create({
         flex: 1,
         marginHorizontal: 10,
     },
-    boostSection: {
-        flexDirection: 'row',
-        alignItems: 'center',
-        marginTop: 20,
-    },
-    boostHeader: {
-        flexDirection: 'row',
-        alignItems: 'center',
-        marginRight: 10,
-    },
-    boostTitle: {
-        color: '#FFFFFF8F',
-        fontSize: 16,
-        fontWeight: 'bold',
-    },
-    boostDuration: {
-        color: '#FFFFFF8F',
-        fontSize: 16,
-    },
-    boostContent: {
-        flexDirection: 'row',
-        alignItems: 'center',
-    },
-    boostActive: {
-        backgroundColor: '#0FC257',
-        borderRadius: 10,
-        padding: 5,
-    },
-    boostActiveText: {
-        color: '#FFF',
-        fontSize: 16,
-        fontWeight: 'bold',
-    },
-    boostInactive: {
-        backgroundColor: '#95A0C9',
-        borderRadius: 10,
-        padding: 5,
-    },
-    boostInactiveText: {
-        color: '#FFFFFF8F',
-        fontSize: 16,
-    },
     uptimeSection: {
         flexDirection: 'row',
         alignItems: 'center',
-        marginTop: 20,
+        marginTop: 0,
+        marginBottom: 20,
     },
     uptimeTitle: {
         color: '#FFFFFF8F',
