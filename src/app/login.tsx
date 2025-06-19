@@ -1,5 +1,5 @@
 import {useEffect, useRef, useState} from 'react';
-import {StyleSheet, Text, TouchableOpacity, View} from 'react-native';
+import {StyleSheet, Text, TouchableOpacity, View, Dimensions} from 'react-native';
 import {Button} from '@react-navigation/elements';
 import {Image} from 'expo-image';
 import {LoginWebView} from "../components/Login/LoginWebView";
@@ -8,11 +8,12 @@ import React from "react";
 import {tokenStorage} from "../service/storage/tokenStorage";
 import {useAuth} from "../service/auth/useAuth";
 
+const {width: screenWidth} = Dimensions.get('window');
+
 const Login = () => {
     const [showLogin, setShowLogin] = useState(false);
     const [showRegister, setShowRegister] = useState(false);
     const initRef = useRef(false);
-
     const { token, isLoadingToken } = useAuth();
 
     function handleRedirect(linkType: 'auth' | 'register') {
@@ -23,7 +24,6 @@ const Login = () => {
         // Prevent double execution in React Strict Mode
         if (initRef.current) return;
         initRef.current = true;
-
         console.log('Login component mounted');
     }, []);
 
@@ -32,7 +32,6 @@ const Login = () => {
             setShowLogin(true);
         }
     }, [isLoadingToken, token]);
-
 
     if (showLogin) {
         return (
@@ -57,7 +56,7 @@ const Login = () => {
                     Login
                 </Button>
                 <TouchableOpacity style={styles.secondaryButton} onPress={() => handleRedirect('register')}>
-                    <Text style={styles.secondaryButtonText}>Register with Email</Text>
+                    <Text style={styles.secondaryButtonText}>Sign up</Text>
                 </TouchableOpacity>
             </View>
         </View>
@@ -68,6 +67,7 @@ const styles = StyleSheet.create({
     container: {
         flex: 1,
         backgroundColor: '#111A26',
+        position: 'relative',
     },
     backgroundImage: {
         position: 'absolute',
@@ -77,47 +77,54 @@ const styles = StyleSheet.create({
         bottom: 0,
         width: '100%',
         height: '100%',
+        zIndex: 1,
     },
     logoContainer: {
         justifyContent: 'center',
         alignItems: 'center',
-        marginTop: 20,
+        marginTop: 56, // Equivalent to mt-14 (14 * 4 = 56)
+        zIndex: 10,
     },
     logo: {
-        height: 40,
-        width: 100,
+        height: 40, // Equivalent to h-10
+        width: 100, // Adjust based on your logo aspect ratio
     },
     buttonContainer: {
         flex: 1,
         justifyContent: 'center',
         alignItems: 'center',
-        paddingHorizontal: 20,
-        marginTop: -60,
+        paddingHorizontal: 24, // Equivalent to px-6
+        marginTop: -64, // Equivalent to -mt-16 (-16 * 4 = -64)
+        zIndex: 10,
     },
     button: {
-        width: '100%',
+        width: Math.min(screenWidth * 0.7, 384), // Equivalent to w-[70vw] max-w-md
         backgroundColor: '#8F4AE3',
-        padding: 15,
-        borderRadius: 5,
+        paddingVertical: 12, // Equivalent to py-3
+        borderRadius: 6, // Equivalent to rounded-md
         alignItems: 'center',
+        justifyContent: 'center',
     },
     buttonText: {
         color: 'white',
-        fontWeight: 'bold',
+        fontWeight: '800', // Extra bold
+        fontSize: 16,
     },
     secondaryButton: {
-        width: '100%',
+        width: Math.min(screenWidth * 0.7, 384), // Equivalent to w-[70vw] max-w-md
         backgroundColor: 'transparent',
-        padding: 15,
-        borderRadius: 5,
+        paddingVertical: 12, // Equivalent to py-3
+        borderRadius: 6, // Equivalent to rounded-md
         borderWidth: 1,
         borderColor: '#8F4AE3',
         alignItems: 'center',
-        marginTop: 10,
+        justifyContent: 'center',
+        marginTop: 20, // Equivalent to mt-5
     },
     secondaryButtonText: {
         color: '#8F4AE3',
-        fontWeight: 'bold',
+        fontWeight: '800', // Extra bold
+        fontSize: 16,
     },
 });
 

@@ -345,7 +345,7 @@ const Home: React.FC = () => {
 
                     {/* Uptime Section */}
                     <View style={styles.uptimeSection}>
-                        <Text style={styles.uptimeTitle}>Uptime</Text>
+                        <Text style={styles.uptimeTitle}>Uptime:  </Text>
                         <Text style={styles.uptimeValue}>{formattedUptime}</Text>
                     </View>
                 </View>
@@ -524,9 +524,9 @@ const styles = StyleSheet.create({
         fontWeight: 'bold',
     },
     uptimeValue: {
-        color: '#FFFFFF8F',
+        color: '#FFF',
         fontSize: 16,
-        marginLeft: 10,
+        fontWeight: 'bold',
     },
     refreshButton: {
         flexDirection: 'row',

@@ -2,6 +2,7 @@ import React, { useState, useEffect, useMemo } from 'react';
 import { View, Text, TouchableOpacity, Image, StyleSheet } from 'react-native';
 import { useRewards } from '../../service/rewards/rewards';
 import { useAuth } from '../../service/auth/useAuth';
+import { Dimensions } from 'react-native';
 
 // You'll need to import these functions from your API/utils
 // import { ClaimDailyReward } from './api';
@@ -38,6 +39,21 @@ const DailyBoostClaim: React.FC = () => {
     const [isBoosted, setIsBoosted] = useState(false);
     const [boostDuration, setBoostDuration] = useState(0);
 
+    // Auto-hide tooltip after 15 seconds
+    useEffect(() => {
+        let tooltipTimer: NodeJS.Timeout;
+        if (showTooltip) {
+            tooltipTimer = setTimeout(() => {
+                setShowTooltip(false);
+            }, 15000); // 15 seconds
+        }
+        return () => {
+            if (tooltipTimer) {
+                clearTimeout(tooltipTimer);
+            }
+        };
+    }, [showTooltip]);
+
     const getUnlockButtonLabel = (): string => {
         if (status?.next_reward_available_in_seconds) {
             const minutes = Math.ceil(status.next_reward_available_in_seconds / 60);
@@ -45,7 +61,34 @@ const DailyBoostClaim: React.FC = () => {
         }
         return "Unlocking soon...";
     };
+    //Tooltip positioning
+    const { width: screenWidth } = Dimensions.get('window');
 
+    const getTooltipStyle = () => {
+        const tooltipWidth = 180;
+        const rightOffset = screenWidth < 350 ? -60 : -100;
+        
+        return {
+            position: 'absolute' as const,
+            top: -130,
+            right: rightOffset,
+            backgroundColor: '#8F4AE333',
+            paddingHorizontal: 12,
+            paddingVertical: 4,
+            borderRadius: 8,
+            width: tooltipWidth,
+            shadowColor: '#000',
+            shadowOffset: {
+                width: 0,
+                height: 2,
+            },
+            shadowOpacity: 0.25,
+            shadowRadius: 3.84,
+            elevation: 5,
+            zIndex: 1000,
+        };
+    };
+    
     const convertSecondsToTime = (seconds: number): string => {
         const hours = Math.floor(seconds / 3600);
         const minutes = Math.floor((seconds % 3600) / 60);
@@ -107,18 +150,25 @@ const DailyBoostClaim: React.FC = () => {
                         />
                     </TouchableOpacity>
 
-                    {/* Tooltip */}
+                    
                     {showTooltip && (
-                        <View style={styles.tooltip}>
-                            <Text style={styles.tooltipText}>
-                                Stay connected for at least 10 minutes every day to unlock rewards!
-                                {'\n\n'}
-                                Each day = more points.{'\n'}
-                                Day 7? Big bonus 🔥
-                                {'\n\n'}
-                                Miss a day? Ups... streak resets.
-                            </Text>
-                        </View>
+                        <>
+                            <TouchableOpacity
+                                style={styles.tooltipOverlay}
+                                activeOpacity={0}
+                                onPress={() => setShowTooltip(false)}
+                            />
+                            <View style={getTooltipStyle()}>
+                                <Text style={styles.tooltipText}>
+                                    Stay connected for at least 10 minutes every day to unlock rewards!
+                                    {'\n\n'}
+                                    Each day = more points.{'\n'}
+                                    Day 7? Big bonus 🔥
+                                    {'\n\n'}
+                                    Miss a day? Ups... streak resets.
+                                </Text>
+                            </View>
+                        </>
                     )}
                 </View>
 
@@ -204,13 +254,14 @@ const styles = StyleSheet.create({
     },
     tooltip: {
         position: 'absolute',
-        top: -176,
-        right: -150,
+        top: -140,  // Reduced height
+        right: -120, // Less extreme positioning
         backgroundColor: '#8F4AE333',
-        paddingHorizontal: 8,
-        paddingVertical: 8,
-        borderRadius: 6,
-        width: 144,
+        paddingHorizontal: 12,
+        paddingVertical: 10,
+        borderRadius: 8,
+        width: 180,  // Slightly wider
+        maxWidth: 200,
         shadowColor: '#000',
         shadowOffset: {
             width: 0,
@@ -219,6 +270,7 @@ const styles = StyleSheet.create({
         shadowOpacity: 0.25,
         shadowRadius: 3.84,
         elevation: 5,
+        zIndex: 1000,
     },
     tooltipText: {
         color: 'white',
@@ -243,25 +295,41 @@ const styles = StyleSheet.create({
     button: {
         marginTop: 8,
         paddingHorizontal: 24,
-        paddingVertical: 6,
+        paddingVertical: 10,
         borderRadius: 6,
     },
     buttonContent: {
         flexDirection: 'row',
         alignItems: 'center',
         justifyContent: 'center',
+        minHeight: 20,
     },
     buttonIcon: {
         marginRight: 8,
+        height: 16,
+        width: 16,
+        alignItems: 'center',
+        justifyContent: 'center',
     },
     buttonText: {
         color: 'white',
         fontSize: 14,
         fontWeight: '400',
+        lineHeight: 20,
     },
     lockIcon: {
-        height: 16,
-        width: 16,
+        height: 14,
+        width: 14,
+        resizeMode: 'contain',
+    },
+    tooltipOverlay: {
+        position: 'absolute',
+        top: -1000,
+        left: -1000,
+        right: -1000,
+        bottom: -1000,
+        backgroundColor: 'transparent',
+        zIndex: 999,
     },
 });
 
