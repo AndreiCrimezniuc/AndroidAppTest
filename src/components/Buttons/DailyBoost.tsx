@@ -1,6 +1,7 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { View, Text, TouchableOpacity, Image, StyleSheet } from 'react-native';
-
+import { useRewards } from '../../service/rewards/rewards';
+import { useAuth } from '../../service/auth/useAuth';
 
 // You'll need to import these functions from your API/utils
 // import { ClaimDailyReward } from './api';
@@ -11,23 +12,38 @@ interface ClaimRewardResponse {
     boost_duration_in_seconds?: number;
 }
 
+interface ButtonProps {
+    label: string;
+    background: string;
+    onPress: () => void;
+    icon?: React.ReactNode;
+}
+
+const Button: React.FC<ButtonProps> = ({ label, background, onPress, icon }) => (
+    <TouchableOpacity
+        style={[styles.button, { backgroundColor: background }]}
+        onPress={onPress}
+    >
+        <View style={styles.buttonContent}>
+            {icon && <View style={styles.buttonIcon}>{icon}</View>}
+            <Text style={styles.buttonText}>{label}</Text>
+        </View>
+    </TouchableOpacity>
+);
+
 const DailyBoostClaim: React.FC = () => {
-    const [isLocked, setIsLocked] = useState(true);
-    const [isBoosted, setIsBoosted] = useState(false);
-    const [isClaimed, setIsClaimed] = useState(false);
+    const { token, isLoadingToken } = useAuth();
+    const { status, isLoading, error, claimReward, isLocked, isClaimed } = useRewards(token);
     const [showTooltip, setShowTooltip] = useState(false);
-    const [unlockCountdown, setUnlockCountdown] = useState(10);
+    const [isBoosted, setIsBoosted] = useState(false);
     const [boostDuration, setBoostDuration] = useState(0);
 
     const getUnlockButtonLabel = (): string => {
-        if (isLocked) {
-            if (unlockCountdown > 0) {
-                return `Unlock in ${unlockCountdown} min`;
-            } else {
-                return "Unlocking soon...";
-            }
+        if (status?.next_reward_available_in_seconds) {
+            const minutes = Math.ceil(status.next_reward_available_in_seconds / 60);
+            return `Unlock in ${minutes} min`;
         }
-        return "";
+        return "Unlocking soon...";
     };
 
     const convertSecondsToTime = (seconds: number): string => {
@@ -44,74 +60,40 @@ const DailyBoostClaim: React.FC = () => {
         }
     };
 
-    const fetchStatus = () => {
-        // Implement your status fetching logic here
-        console.log('Fetching status...');
-    };
+    const handleClaim = async () => {
+        if (!claimReward) return;
 
-    const ClaimDailyReward = async (): Promise<ClaimRewardResponse> => {
-        // Replace with your actual API call
-        return new Promise((resolve) => {
-            setTimeout(() => {
-                resolve({
-                    special_reward: Math.random() > 0.5,
-                    boost_duration_in_seconds: 3600 // 1 hour example
-                });
-            }, 1000);
-        });
-    };
-
-    const LogPrint = (message: string) => {
-        console.log(message);
-    };
-
-    const LogError = (message: string) => {
-        console.error(message);
-    };
-
-    const claimHandler = () => {
-        ClaimDailyReward()
-            .then((resp: ClaimRewardResponse) => {
-                setIsBoosted(resp.special_reward);
-                setIsClaimed(true);
-                const boostDurationSeconds = resp?.boost_duration_in_seconds;
-
-                LogPrint("Got boost for " + boostDurationSeconds);
-
-                if (boostDurationSeconds) {
-                    setBoostDuration(boostDurationSeconds);
-
+        try {
+            const result = await claimReward();
+            if (result) {
+                setIsBoosted(result.special_reward);
+                
+                if (result.boost_duration_in_seconds) {
+                    setBoostDuration(result.boost_duration_in_seconds);
+                    
+                    // Reset boost after duration
                     setTimeout(() => {
-                        fetchStatus();
                         setIsBoosted(false);
-                    }, boostDurationSeconds * 1000);
+                    }, result.boost_duration_in_seconds * 1000);
                 }
-
-                LogPrint("Reward successfully claimed.");
-            })
-            .catch((err) => {
-                LogError("Failed to claim reward:" + err);
-            });
+            }
+        } catch (err) {
+            console.error("Failed to claim reward:", err);
+        }
     };
 
-    interface ButtonProps {
-        label: string;
-        background: string;
-        onPress: () => void;
-        icon?: React.ReactNode;
-    }
-
-    const Button: React.FC<ButtonProps> = ({ label, background, onPress, icon }) => (
-        <TouchableOpacity
-            style={[styles.button, { backgroundColor: background }]}
-            onPress={onPress}
-        >
-            <View style={styles.buttonContent}>
-                {icon && <View style={styles.buttonIcon}>{icon}</View>}
-                <Text style={styles.buttonText}>{label}</Text>
+    // Show loading state while token is loading
+    if (isLoadingToken) {
+        return (
+            <View style={styles.container}>
+                <View style={styles.claimBox}>
+                    <View style={styles.titleContainer}>
+                        <Text style={styles.title}>Loading...</Text>
+                    </View>
+                </View>
             </View>
-        </TouchableOpacity>
-    );
+        );
+    }
 
     return (
         <View style={styles.container}>
@@ -120,7 +102,7 @@ const DailyBoostClaim: React.FC = () => {
                 <View style={styles.iconContainer}>
                     <TouchableOpacity onPress={() => setShowTooltip(!showTooltip)}>
                         <Image
-                            source={require('../../assets/logo/info.png')} // Replace with your icon path
+                            source={require('../../assets/logo/info.png')}
                             style={styles.infoIcon}
                         />
                     </TouchableOpacity>
@@ -140,9 +122,14 @@ const DailyBoostClaim: React.FC = () => {
                     )}
                 </View>
 
-                {/* Title */}
+                {/* Title with streak */}
                 <View style={styles.titleContainer}>
-                    <Text style={styles.title}>Claim Daily Boost</Text>
+                    <Text style={styles.title}>
+                        Claim Daily Boost
+                        {status && status.streak_count > 0 && (
+                            <Text style={styles.streakText}> (Day {status.streak_count})</Text>
+                        )}
+                    </Text>
                 </View>
 
                 {/* Conditional Button Rendering */}
@@ -160,9 +147,9 @@ const DailyBoostClaim: React.FC = () => {
                     />
                 ) : !isClaimed ? (
                     <Button
-                        label="Claim Now"
+                        label={isLoading ? "Claiming..." : "Claim Now"}
                         background="#8f4ae3"
-                        onPress={claimHandler}
+                        onPress={handleClaim}
                     />
                 ) : isBoosted ? (
                     <Button
@@ -248,6 +235,10 @@ const styles = StyleSheet.create({
         fontSize: 16,
         color: 'white',
         fontWeight: '500',
+    },
+    streakText: {
+        color: '#8f4ae3',
+        fontSize: 14,
     },
     button: {
         marginTop: 8,

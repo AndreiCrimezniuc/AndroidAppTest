@@ -1,10 +1,17 @@
 import { parseUrl } from 'query-string';
-import {AUTH_LINK, CLIENT_ID, CLIENT_SECRET, KEYCLOAK_BASE_URL, AFTER_REGISTRATION_REDIRECT_URL} from "../links";
+import {AUTH_LINK, CLIENT_ID, CLIENT_SECRET, KEYCLOAK_BASE_URL, AFTER_REGISTRATION_REDIRECT_URL, KEYCLOAK_LOGIN_LINK_FROM_REGISTRATION_PAGE} from "../links";
 import { tokenStorage } from '../storage/tokenStorage';
 
 // @ts-ignore
 export const handleRegisterRedirect = (navState: any,  navigation: any) => {
     const { url } = navState;
+
+    console.log("Get URL: ", url);
+
+    if (url && url.startsWith(KEYCLOAK_LOGIN_LINK_FROM_REGISTRATION_PAGE)) {
+        console.log("Redirecting to LoginWebView");
+        navigation.navigate("LoginWebView");
+    }
 
     if (url && url.startsWith(AFTER_REGISTRATION_REDIRECT_URL)) {
         try {
@@ -22,7 +29,7 @@ export const handleRegisterRedirect = (navState: any,  navigation: any) => {
                 console.log('Authorization code received:', code);
 
                 fetchBearerToken(code).then(() => {
-                    navigation.navigate('Login');
+                    navigation.navigate('Index');
                 }).catch((error) => {
                     console.error('Token exchange failed:', error);
                 });

@@ -38,13 +38,13 @@ const useEarnings = (token: string | null) => {
         }
     }, [token]);
 
-    // Auto-fetch every 60 seconds, but only when app is focused
+    // Auto-fetch every 60*2 seconds, but only when app is focused
     useFocusEffect(
         useCallback(() => {
             if (!token) return;
 
             fetchEarnings();
-            const intervalId = setInterval(fetchEarnings, 60000);
+            const intervalId = setInterval(fetchEarnings, 2*60000);
 
             return () => clearInterval(intervalId);
         }, [token, fetchEarnings])
@@ -391,7 +391,7 @@ const styles = StyleSheet.create({
         justifyContent: 'space-between',
         alignItems: 'center',
         padding: 15,
-        marginTop: 10,
+        marginTop: 40,
     },
     logo: {
         height: 40,
@@ -402,7 +402,7 @@ const styles = StyleSheet.create({
         flex: 1,
         justifyContent: 'space-between',
         alignItems: 'center',
-        marginTop: 60,
+        marginTop: 30,
         paddingTop: 0,
     },
     mainContent: {
@@ -558,7 +558,7 @@ const styles = StyleSheet.create({
     dropdownMenu: {
         position: 'absolute',
         right: 20,
-        top: 80,
+        top: 100,
         backgroundColor: '#111A26',
         borderRadius: 16,
         padding: 10,

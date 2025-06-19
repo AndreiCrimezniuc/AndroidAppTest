@@ -6,6 +6,7 @@ import * as Linking from 'expo-linking';
 import Login from "./src/app/login";
 import Home from "./src/app/home";
 import {LogoutWebView} from "./src/components/Login/LogoutWebView";
+import { LoginWebView } from './src/components/Login/LoginWebView';
 
 const Stack = createStackNavigator();
 
@@ -88,6 +89,7 @@ function AppNavigation() {
                     }}
                 />
                 <Stack.Screen name="LogoutWebView" component={LogoutWebView} options={{ headerShown: false }} />
+                <Stack.Screen name="LoginWebView" component={LoginWebView} options={{ headerShown: false }} />
 
             </Stack.Navigator>
         </NavigationContainer>
