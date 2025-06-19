@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { View, Text, TouchableOpacity, Image, StyleSheet, Animated } from 'react-native';
 import Svg, { Circle, Path } from 'react-native-svg';
 
@@ -13,34 +13,28 @@ const ConnectionStatusWithRefresh: React.FC<ConnectionStatusWithRefreshProps> = 
 }) => {
     const [isRefreshing, setIsRefreshing] = useState(false);
     const [refreshDisabled, setRefreshDisabled] = useState(false);
+    const [isPressed, setIsPressed] = useState(false);
     const [isRefreshHovered, setIsRefreshHovered] = useState(false);
     const [isTooltipHovered, setIsTooltipHovered] = useState(false);
     const [refreshTooltip, setRefreshTooltip] = useState('Refresh data');
     const [refreshCooldown, setRefreshCooldown] = useState(0);
+    const [showCountdown, setShowCountdown] = useState(false);
 
     const spinValue = new Animated.Value(0);
-    const fadeAnim = new Animated.Value(0);
+    const scaleValue = new Animated.Value(1);
 
+    // Scale animation for press effect
     useEffect(() => {
-        let interval: NodeJS.Timeout;
-        if (refreshCooldown > 0) {
-            interval = setInterval(() => {
-                setRefreshCooldown((prev) => {
-                    const newValue = prev - 1;
-                    if (newValue <= 0) {
-                        setRefreshDisabled(false);
-                        setRefreshTooltip('Refresh data');
-                        return 0;
-                    }
-                    setRefreshTooltip(`Wait ${newValue}s`);
-                    return newValue;
-                });
-            }, 1000);
-        }
-        return () => clearInterval(interval);
-    }, [refreshCooldown]);
+        Animated.spring(scaleValue, {
+            toValue: isPressed ? 0.9 : 1,
+            useNativeDriver: true,
+            tension: 40,
+            friction: 7,
+        }).start();
+    }, [isPressed]);
 
-    const startSpinAnimation = () => {
+    // Continuous rotation animation
+    const startSpinAnimation = useCallback(() => {
         spinValue.setValue(0);
         Animated.loop(
             Animated.timing(spinValue, {
@@ -49,33 +43,46 @@ const ConnectionStatusWithRefresh: React.FC<ConnectionStatusWithRefreshProps> = 
                 useNativeDriver: true,
             })
         ).start();
-    };
+    }, [spinValue]);
 
-    const stopSpinAnimation = () => {
-        spinValue.stopAnimation();
-    };
+    // Handle countdown timer
+    useEffect(() => {
+        let interval: NodeJS.Timeout;
+        if (refreshCooldown > 0) {
+            setShowCountdown(true);
+            interval = setInterval(() => {
+                setRefreshCooldown((prev) => {
+                    const newValue = prev - 1;
+                    if (newValue <= 0) {
+                        setRefreshDisabled(false);
+                        setShowCountdown(false);
+                        setRefreshTooltip('Refresh data');
+                        return 0;
+                    }
+                    setRefreshTooltip(`Wait ${newValue}s`);
+                    return newValue;
+                });
+            }, 1000);
+        }
+        return () => {
+            if (interval) clearInterval(interval);
+        };
+    }, [refreshCooldown]);
 
-    const showTooltip = () => {
-        Animated.timing(fadeAnim, {
-            toValue: 1,
-            duration: 200,
-            useNativeDriver: true,
-        }).start();
-    };
-
-    const hideTooltip = () => {
-        Animated.timing(fadeAnim, {
-            toValue: 0,
-            duration: 200,
-            useNativeDriver: true,
-        }).start();
-    };
+    // Start spinning when refreshing starts
+    useEffect(() => {
+        if (isRefreshing) {
+            startSpinAnimation();
+        } else {
+            spinValue.stopAnimation();
+            spinValue.setValue(0);
+        }
+    }, [isRefreshing, startSpinAnimation]);
 
     const refreshData = async () => {
         if (refreshDisabled || isRefreshing) return;
 
         setIsRefreshing(true);
-        startSpinAnimation();
 
         try {
             if (onRefresh) {
@@ -85,34 +92,29 @@ const ConnectionStatusWithRefresh: React.FC<ConnectionStatusWithRefreshProps> = 
 
             // Set cooldown
             setRefreshDisabled(true);
-            setRefreshCooldown(30); // 30 seconds cooldown
+            setRefreshCooldown(60*5); // 30 seconds cooldown
 
         } catch (error) {
             console.error('Failed to refresh data:', error);
         } finally {
             setIsRefreshing(false);
-            stopSpinAnimation();
         }
-    };
-
-    const shouldShowTooltip = (): boolean => {
-        return isRefreshHovered || isTooltipHovered;
     };
 
     const spin = spinValue.interpolate({
         inputRange: [0, 1],
-        outputRange: ['0deg', '360deg'],
+        outputRange: ['0deg', '360deg']
     });
 
     const ClockIcon: React.FC<{ color: string }> = ({ color }) => (
-        <Svg width="12" height="12" viewBox="0 0 24 24" fill="none">
+        <Svg width="12" height="12" viewBox="0 0 36 36" fill="none">
     <Circle cx="12" cy="12" r="10" stroke={color} strokeWidth="2" />
     <Path d="M12 6L12 12L16 14" stroke={color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
         </Svg>
 );
 
     const RefreshIcon: React.FC<{ color: string }> = ({ color }) => (
-        <Svg width="12" height="12" viewBox="0 0 24 24" fill="none">
+        <Svg width="12" height="12" viewBox="0 0 36 36" fill="none">
     <Path d="M4 12C4 7.58172 7.58172 4 12 4C16.4183 4 20 7.58172 20 12" stroke={color} strokeWidth="2" strokeLinecap="round" />
     <Path d="M16 8L20 12L24 8" stroke={color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
     <Path d="M20 12C20 16.4183 16.4183 20 12 20C7.58172 20 4 16.4183 4 12" stroke={color} strokeWidth="2" strokeLinecap="round" />
@@ -122,77 +124,65 @@ const ConnectionStatusWithRefresh: React.FC<ConnectionStatusWithRefreshProps> = 
 
     return (
         <View style={styles.container}>
-            {/* Connected status */}
             <View style={styles.statusContainer}>
-    <View style={styles.statusCard}>
-    <View style={[
-            styles.statusDot,
-    { backgroundColor: connected ? '#0FC257' : '#95A0C9' }
-]} />
-    <Text style={styles.statusText}>
-        {connected ? 'Connected' : 'Disconnected'}
-        </Text>
+                <View style={styles.statusCard}>
+                    <View style={[
+                        styles.statusDot,
+                        { backgroundColor: connected ? '#0FC257' : '#95A0C9' }
+                    ]} />
+                    <Text style={styles.statusText}>
+                        {connected ? 'Connected' : 'Disconnected'}
+                    </Text>
 
-    {/* Refresh Button */}
-    <View style={styles.refreshContainer}>
-    <TouchableOpacity
-        style={[
-            styles.refreshButton,
-    {
-        opacity: refreshDisabled ? 0.6 : 1,
-            backgroundColor: refreshDisabled ? '#3F3B63' : 'transparent',
-    }
-]}
-    onPress={refreshData}
-    disabled={refreshDisabled}
-    onPressIn={() => setIsRefreshHovered(true)}
-    onPressOut={() => setIsRefreshHovered(false)}
->
-    <Animated.View style={{ transform: [{ rotate: isRefreshing ? spin : '0deg' }] }}>
-    <Image
-        source={require('../assets/logo/refresh.png')}
-    style={[
-            styles.refreshIcon,
-    { opacity: refreshDisabled ? 0.6 : 1 }
-]}
-    />
-    </Animated.View>
-    </TouchableOpacity>
-
-    {/* Tooltip */}
-    {shouldShowTooltip() && (
-        <Animated.View
-            style={[
-                styles.tooltip,
-        {
-            opacity: fadeAnim,
-                backgroundColor: refreshDisabled ? '#1D293B' : '#1A2233',
-            borderColor: refreshDisabled ? '#8F4AE3' : '#6CE7E4',
-        }
-    ]}
-        onTouchStart={() => setIsTooltipHovered(true)}
-        onTouchEnd={() => setIsTooltipHovered(false)}
-    >
-        <View style={styles.tooltipContent}>
-            {refreshDisabled ? (
-                    <>
-                        <ClockIcon color="#8F4AE3" />
-                    <Text style={styles.tooltipText}>{refreshTooltip}</Text>
-                        </>
-                ) : (
-                    <>
-                        <RefreshIcon color="#6CE7E4" />
-                    <Text style={styles.tooltipText}>{refreshTooltip}</Text>
-                        </>
-                )}
+                    {/* Refresh Button with Countdown */}
+                    <View style={styles.refreshContainer}>
+                        <TouchableOpacity
+                            style={[
+                                styles.refreshButton,
+                                {
+                                    opacity: refreshDisabled ? 0.6 : 1,
+                                    backgroundColor: isPressed ? '#FFFFFF14' : 'transparent',
+                                    transform: [{ scale: isPressed ? 0.95 : 1 }],
+                                }
+                            ]}
+                            onPress={refreshData}
+                            onPressIn={() => setIsPressed(true)}
+                            onPressOut={() => setIsPressed(false)}
+                            disabled={refreshDisabled}
+                        >
+                            <Animated.View 
+                                style={[
+                                    styles.refreshIconContainer,
+                                    { 
+                                        transform: [
+                                            { rotate: spin },
+                                            { scale: scaleValue }
+                                        ] 
+                                    }
+                                ]}
+                            >
+                                <Image
+                                    source={require('../assets/logo/icon_refresh.png')}
+                                    style={[
+                                        styles.refreshIcon,
+                                        { opacity: refreshDisabled ? 0.6 : 1 }
+                                    ]}
+                                />
+                            </Animated.View>
+                            {showCountdown && (
+                                <Animated.Text style={[
+                                    styles.countdownText,
+                                    { transform: [{ scale: scaleValue }] }
+                                ]}>
+                                    {refreshCooldown}s
+                                </Animated.Text>
+                            )}
+                        </TouchableOpacity>
+                    </View>
+                </View>
             </View>
-            </Animated.View>
-    )}
-    </View>
-    </View>
-    </View>
-    </View>
-);
+        </View>
+    );
 };
 
 const styles = StyleSheet.create({
@@ -226,46 +216,36 @@ const styles = StyleSheet.create({
     },
     refreshContainer: {
         position: 'relative',
+        flexDirection: 'row',
+        alignItems: 'center',
+        marginLeft: 4,
     },
     refreshButton: {
-        marginLeft: 8,
-        padding: 6,
-        borderRadius: 20,
+        flexDirection: 'row',
+        alignItems: 'center',
+        justifyContent: 'center',
+        marginLeft: 4,
+        padding: 8,
+        borderRadius: 50,
+        gap: 4,
+    },
+    refreshIconContainer: {
+        width: 16,
+        height: 16,
         alignItems: 'center',
         justifyContent: 'center',
     },
     refreshIcon: {
         width: 16,
         height: 16,
+        opacity: 1,
     },
-    tooltip: {
-        position: 'absolute',
-        top: 0,
-        left: '100%',
-        marginLeft: 8,
-        paddingHorizontal: 10,
-        paddingVertical: 4,
-        borderRadius: 20,
-        borderWidth: 1,
-        shadowColor: '#000',
-        shadowOffset: {
-            width: 0,
-            height: 2,
-        },
-        shadowOpacity: 0.25,
-        shadowRadius: 3.84,
-        elevation: 5,
-        zIndex: 50,
-    },
-    tooltipContent: {
-        flexDirection: 'row',
-        alignItems: 'center',
-        gap: 4,
-    },
-    tooltipText: {
-        color: 'white',
+    countdownText: {
+        color: '#FFFFFF8F',
         fontSize: 12,
-        fontWeight: '500',
+        marginLeft: 4,
+        minWidth: 26,
+        textAlign: 'left',
     },
 });
 

@@ -239,13 +239,13 @@ const Home: React.FC = () => {
         try {
             await Promise.all([
                 refetchEarnings(),
-                refetchReferral()
+                //refetchReferral() Now it only retrieves the referral link, not the referrals number
             ]);
         } catch (error) {
             console.error('Error refreshing data:', error);
             Alert.alert('Refresh Failed', 'Unable to refresh data. Please try again.');
         }
-    }, [refetchEarnings, refetchReferral]);
+    }, [refetchEarnings]);
 
     // Asset imports (moved outside render for performance)
     const assets = useMemo(() => ({
