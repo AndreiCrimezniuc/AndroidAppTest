@@ -1,0 +1,39 @@
+name: Tag major release
+
+on:
+  workflow_dispatch:
+    inputs:
+      release_tag:
+        description: "Major release version. Example: 2.0.0"
+        required: true
+        type: string
+
+jobs:
+  tag-major-release:
+    runs-on: ubuntu-latest
+    if: ${{ github.ref == 'refs/heads/master' }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v3
+        with:
+          fetch-depth: 0
+          token: ${{ secrets.GITBOT_GITHUB_TOKEN }}
+
+      - name: Fetch all tags
+        run: git fetch --tags
+
+      - name: Check if tag already exists
+        run: |
+          if git rev-parse "v${{ github.event.inputs.release_tag }}" >/dev/null 2>&1; then
+            echo "❌ Tag v${{ github.event.inputs.release_tag }} already exists."
+            exit 1
+          fi
+
+      - name: Create and push tag
+        env:
+          TAG_VERSION: v${{ github.event.inputs.release_tag }}
+        run: |
+          git config --global user.name "${{ github.actor }}"
+          git config --global user.email "gitbot@tertianet.com"
+          git tag $TAG_VERSION
+          git push origin $TAG_VERSION

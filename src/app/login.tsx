@@ -11,10 +11,10 @@ import {useAuth} from "../service/auth/useAuth";
 const {width: screenWidth} = Dimensions.get('window');
 
 const Login = () => {
+    const { token, isLoadingToken } = useAuth();
     const [showLogin, setShowLogin] = useState(false);
     const [showRegister, setShowRegister] = useState(false);
     const initRef = useRef(false);
-    const { token, isLoadingToken } = useAuth();
 
     function handleRedirect(linkType: 'auth' | 'register') {
         linkType === 'auth' ? setShowLogin(true) : setShowRegister(true);
@@ -26,12 +26,6 @@ const Login = () => {
         initRef.current = true;
         console.log('Login component mounted');
     }, []);
-
-    useEffect(() => {
-        if (!isLoadingToken && token) {
-            setShowLogin(true);
-        }
-    }, [isLoadingToken, token]);
 
     if (showLogin) {
         return (
