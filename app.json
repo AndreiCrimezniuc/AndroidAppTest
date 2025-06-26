@@ -1,6 +1,7 @@
 {
   "expo": {
     "name": "GridApp",
+    "scheme": "grid",
     "slug": "GridApp",
     "version": "1.0.0",
     "orientation": "portrait",
@@ -25,6 +26,14 @@
     },
     "web": {
       "favicon": "./assets/favicon.png"
+    },
+    "plugins": [
+      "expo-secure-store"
+    ],
+    "extra": {
+      "eas": {
+        "projectId": "e033e934-74ca-4ea1-808a-17a5d4a8ec4d"
+      }
     }
   }
 }

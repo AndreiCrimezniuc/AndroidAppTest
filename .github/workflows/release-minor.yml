@@ -1,0 +1,44 @@
+name: Tag minor release
+
+on:
+  workflow_dispatch:
+
+jobs:
+  tag-minor-release:
+    runs-on: ubuntu-latest
+    if: ${{ github.ref == 'refs/heads/master' }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v3
+        with:
+          fetch-depth: 0
+          token: ${{ secrets.GITBOT_GITHUB_TOKEN }}
+
+      - name: Extract latest tag
+        id: extract_tag
+        run: |
+          git fetch --tags
+          latest_tag=$(git describe --tags `git rev-list --tags --max-count=1`)
+          echo "latest_tag=$latest_tag" >> $GITHUB_OUTPUT
+
+      - name: Calculate next minor version
+        id: version_step
+        run: |
+          latest_tag=${{ steps.extract_tag.outputs.latest_tag }}
+          major=$(echo $latest_tag | cut -d. -f1 | tr -d 'v')
+          minor=$(echo $latest_tag | cut -d. -f2)
+          next_minor=$((minor + 1))
+          echo "version=$major.$next_minor.0" >> $GITHUB_OUTPUT
+
+      - name: Print Version
+        run: |
+          echo "Next version: v${{ steps.version_step.outputs.version }}"
+
+      - name: Create and push Git tag
+        env:
+          TAG_VERSION: v${{ steps.version_step.outputs.version }}
+        run: |
+          git config --global user.name "${{ github.actor }}"
+          git config --global user.email "gitbot@tertianet.com"
+          git tag $TAG_VERSION
+          git push origin $TAG_VERSION
